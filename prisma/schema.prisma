@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Author {
+  id          String   @id @default(cuid())
+  clerkUserId String?  @unique
+  name        String
+  username    String?  @unique
+  avatar      String?
+  bio         String?
+  email       String?
+  website     String?
+  linkedinUrl String?
+  githubUrl   String?
+  location    String?
+  isOwner     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  posts       Post[]
+
+  @@index([clerkUserId])
+}
+
+enum PostStatus {
+  draft
+  published
+}
+
+enum PostType {
+  blog
+  tutorial
+}
+
+model Post {
+  id               String           @id @default(cuid())
+  title            String
+  slug             String           @unique
+  excerpt          String?
+  contentJson      Json?
+  coverImage       String?
+  status           PostStatus       @default(draft)
+  postType         PostType         @default(blog)
+  readTimeMinutes  Int              @default(1)
+  readTimeOverride Int?
+  authorId         String
+  author           Author           @relation(fields: [authorId], references: [id])
+  publishedAt      DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  deletedAt        DateTime?
+  shareLinks       DraftShareLink[]
+  events           PostEvent[]
+
+  @@index([slug])
+  @@index([status, publishedAt])
+  @@index([authorId])
+}
+
+model DraftShareLink {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([token])
+}
+
+enum EventType {
+  view
+  read_25
+  read_50
+  read_70
+  read_100
+}
+
+model PostEvent {
+  id          String    @id @default(cuid())
+  postId      String
+  post        Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  eventType   EventType
+  sessionHash String
+  createdAt   DateTime  @default(now())
+
+  @@index([postId, eventType])
+  @@index([createdAt])
+}
+
+model Subscriber {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  confirmed         Boolean   @default(false)
+  confirmationToken String?   @unique
+  unsubscribeToken  String    @unique
+  subscribedAt      DateTime  @default(now())
+  confirmedAt       DateTime?
+  unsubscribedAt    DateTime?
+
+  @@index([email])
+  @@index([confirmed])
+}
