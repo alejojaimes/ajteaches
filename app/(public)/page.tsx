@@ -1,24 +1,24 @@
-export default function Home() {
+import { getPublishedPosts } from '@/lib/db/posts';
+import { PostCard } from '@/components/blog/PostCard';
+
+export const revalidate = 3600;
+
+export default async function Home() {
+  const posts = await getPublishedPosts({ limit: 10 });
+
   return (
-    <main className="bg-background text-foreground min-h-screen p-8">
-      <div className="mx-auto max-w-4xl">
-        <div className="mb-8 flex items-center gap-3">
-          <div className="bg-primary rounded-button flex h-8 w-8 items-center justify-center text-sm font-bold text-white">
-            aj
-          </div>
-          <span className="text-lg font-medium">ajteaches</span>
-        </div>
-        <h1 className="mb-3 text-4xl font-bold">Engineering, taught well.</h1>
-        <p className="text-muted-foreground mb-8 text-lg">Notes from an engineer who teaches.</p>
-        <div className="flex items-center gap-3">
-          <button className="bg-primary hover:bg-primary-hover rounded-button px-4 py-2 text-sm font-medium text-white transition-colors">
-            Primary button
-          </button>
-          <span className="bg-primary-soft text-primary rounded-badge px-3 py-1 text-sm font-medium">
-            Engineering
-          </span>
-        </div>
-      </div>
-    </main>
+    <div className="mx-auto max-w-7xl px-4 py-12">
+      <section className="mb-16 text-center">
+        <h1 className="text-foreground mb-3 text-5xl font-bold">Engineering, taught well.</h1>
+        <p className="text-muted-foreground text-lg">Notes from an engineer who teaches.</p>
+      </section>
+      <section className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        {posts.length === 0 ? (
+          <p className="text-muted-foreground col-span-3 text-center">No posts yet.</p>
+        ) : (
+          posts.map((post) => <PostCard key={post.id} post={post} />)
+        )}
+      </section>
+    </div>
   );
 }
