@@ -268,3 +268,61 @@
   float: left;
   height: 0;
 }
+
+/* Syntax highlighting — lowlight/highlight.js token classes */
+.tiptap-editor .hljs-comment,
+.tiptap-editor .hljs-quote {
+  color: #6b7280;
+  font-style: italic;
+}
+
+.tiptap-editor .hljs-keyword,
+.tiptap-editor .hljs-selector-tag,
+.tiptap-editor .hljs-built_in,
+.tiptap-editor .hljs-name,
+.tiptap-editor .hljs-tag {
+  color: #4f46e5;
+  font-weight: 500;
+}
+
+.tiptap-editor .hljs-string,
+.tiptap-editor .hljs-template-variable,
+.tiptap-editor .hljs-attr {
+  color: #059669;
+}
+
+.tiptap-editor .hljs-number,
+.tiptap-editor .hljs-literal,
+.tiptap-editor .hljs-variable,
+.tiptap-editor .hljs-meta {
+  color: #8b5cf6;
+}
+
+.tiptap-editor .hljs-title,
+.tiptap-editor .hljs-title.function_,
+.tiptap-editor .hljs-title.class_ {
+  color: #1a1f2e;
+  font-weight: 600;
+}
+
+.tiptap-editor .hljs-type,
+.tiptap-editor .hljs-class .hljs-title {
+  color: #0891b2;
+}
+
+.tiptap-editor .hljs-punctuation,
+.tiptap-editor .hljs-operator {
+  color: #6b7280;
+}
+
+.tiptap-editor .hljs-params {
+  color: #b45309;
+}
+
+.tiptap-editor .hljs-addition {
+  color: #059669;
+}
+
+.tiptap-editor .hljs-deletion {
+  color: #dc2626;
+}

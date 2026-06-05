@@ -5,7 +5,11 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import { StarterKit } from '@tiptap/starter-kit';
 import { Placeholder } from '@tiptap/extension-placeholder';
 import { CharacterCount } from '@tiptap/extension-character-count';
+import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight';
+import { createLowlight, common } from 'lowlight';
 import type { Editor } from '@tiptap/core';
+
+const lowlight = createLowlight(common);
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -64,12 +68,14 @@ export function TiptapEditor({ postId, initialTitle = '', initialContent = null,
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
+        codeBlock: false,
         link: {
           openOnClick: false,
           autolink: true,
           HTMLAttributes: { rel: 'noopener noreferrer', target: '_blank' },
         },
       }),
+      CodeBlockLowlight.configure({ lowlight }),
       Placeholder.configure({ placeholder: 'Tell your story...' }),
       CharacterCount,
     ],
