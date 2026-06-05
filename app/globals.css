@@ -269,6 +269,20 @@
   height: 0;
 }
 
+/* Images in editor */
+.tiptap-editor img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 1.5rem 0;
+  display: block;
+}
+
+.tiptap-editor img.ProseMirror-selectednode {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 /* Syntax highlighting — lowlight/highlight.js token classes */
 .tiptap-editor .hljs-comment,
 .tiptap-editor .hljs-quote {

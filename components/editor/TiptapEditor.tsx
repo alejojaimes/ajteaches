@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useId } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import { StarterKit } from '@tiptap/starter-kit';
 import { Placeholder } from '@tiptap/extension-placeholder';
 import { CharacterCount } from '@tiptap/extension-character-count';
 import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight';
+import { Image } from '@tiptap/extension-image';
 import { createLowlight, common } from 'lowlight';
 import type { Editor } from '@tiptap/core';
 
@@ -30,8 +31,10 @@ type Props = {
 export function TiptapEditor({ postId, initialTitle = '', initialContent = null, onSave }: Props) {
   const [title, setTitle] = useState(initialTitle);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const [uploading, setUploading] = useState(false);
   const titleRef = useRef(title);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fileInputId = useId();
 
   useEffect(() => {
     titleRef.current = title;
@@ -76,6 +79,7 @@ export function TiptapEditor({ postId, initialTitle = '', initialContent = null,
         },
       }),
       CodeBlockLowlight.configure({ lowlight }),
+      Image.configure({ inline: false, allowBase64: false }),
       Placeholder.configure({ placeholder: 'Tell your story...' }),
       CharacterCount,
     ],
@@ -92,6 +96,23 @@ export function TiptapEditor({ postId, initialTitle = '', initialContent = null,
   };
 
   const wordCount = editor ? (editor.storage.characterCount as { words: () => number }).words() : 0;
+
+  const handleImageUpload = async (file: File) => {
+    if (!editor || uploading) return;
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: form });
+      if (!res.ok) throw new Error('Upload failed');
+      const { url } = (await res.json()) as { url: string };
+      editor.chain().focus().setImage({ src: url }).run();
+    } catch {
+      // silent — user sees no image inserted
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const statusLabel: Record<SaveStatus, string> = {
     idle: 'Draft',
@@ -116,6 +137,28 @@ export function TiptapEditor({ postId, initialTitle = '', initialContent = null,
       />
 
       <EditorContent editor={editor} />
+
+      {/* Hidden file input for image upload */}
+      <input
+        id={fileInputId}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void handleImageUpload(file);
+          e.target.value = '';
+        }}
+      />
+
+      <div className="border-border mt-6 flex items-center gap-3 border-t pt-4">
+        <label
+          htmlFor={fileInputId}
+          className={`text-muted-foreground hover:text-foreground cursor-pointer text-xs ${uploading ? 'opacity-50' : ''}`}
+        >
+          {uploading ? 'Uploading…' : '+ Image'}
+        </label>
+      </div>
     </div>
   );
 }
