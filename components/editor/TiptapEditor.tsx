@@ -32,9 +32,13 @@ export function TiptapEditor({ postId, initialTitle = '', initialContent = null,
   const [title, setTitle] = useState(initialTitle);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [uploading, setUploading] = useState(false);
+  const [mentionOpen, setMentionOpen] = useState(false);
+  const [mentionName, setMentionName] = useState('');
+  const [mentionUrl, setMentionUrl] = useState('');
   const titleRef = useRef(title);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputId = useId();
+  const mentionNameId = useId();
 
   useEffect(() => {
     titleRef.current = title;
@@ -97,6 +101,24 @@ export function TiptapEditor({ postId, initialTitle = '', initialContent = null,
 
   const wordCount = editor ? (editor.storage.characterCount as { words: () => number }).words() : 0;
   const readTime = Math.max(1, Math.ceil(wordCount / 225));
+
+  const insertMention = () => {
+    if (!editor || !mentionName.trim()) return;
+    const name = mentionName.trim();
+    const url = mentionUrl.trim();
+    editor
+      .chain()
+      .focus()
+      .insertContent(
+        url
+          ? `<a href="${url}" target="_blank" rel="noopener noreferrer" class="mention">@${name}</a> `
+          : `<span class="mention">@${name}</span> `
+      )
+      .run();
+    setMentionName('');
+    setMentionUrl('');
+    setMentionOpen(false);
+  };
 
   const handleImageUpload = async (file: File) => {
     if (!editor || uploading) return;
@@ -172,7 +194,73 @@ export function TiptapEditor({ postId, initialTitle = '', initialContent = null,
         >
           {uploading ? 'Uploading…' : '+ Image'}
         </label>
+        <button
+          type="button"
+          onClick={() => setMentionOpen(true)}
+          className="text-muted-foreground hover:text-foreground text-xs"
+        >
+          + @Mention
+        </button>
       </div>
+
+      {/* Mention dialog */}
+      {mentionOpen && (
+        <div className="border-border bg-card rounded-card mt-3 border p-4 shadow-md">
+          <p className="text-foreground mb-3 text-sm font-medium">Insert mention</p>
+          <div className="space-y-2">
+            <div>
+              <label htmlFor={mentionNameId} className="text-muted-foreground mb-1 block text-xs">
+                Name *
+              </label>
+              <input
+                id={mentionNameId}
+                type="text"
+                value={mentionName}
+                onChange={(e) => setMentionName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') insertMention();
+                  if (e.key === 'Escape') setMentionOpen(false);
+                }}
+                placeholder="Alejandro Jaimes"
+                autoFocus
+                className="border-border text-foreground focus:ring-primary w-full rounded-md border px-3 py-1.5 text-sm outline-none focus:ring-1"
+              />
+            </div>
+            <div>
+              <label className="text-muted-foreground mb-1 block text-xs">
+                LinkedIn or GitHub URL (optional)
+              </label>
+              <input
+                type="url"
+                value={mentionUrl}
+                onChange={(e) => setMentionUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') insertMention();
+                  if (e.key === 'Escape') setMentionOpen(false);
+                }}
+                placeholder="https://linkedin.com/in/..."
+                className="border-border text-foreground focus:ring-primary w-full rounded-md border px-3 py-1.5 text-sm outline-none focus:ring-1"
+              />
+            </div>
+          </div>
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={insertMention}
+              className="rounded-button bg-primary hover:bg-primary-hover px-3 py-1 text-xs font-medium text-white"
+            >
+              Insert
+            </button>
+            <button
+              type="button"
+              onClick={() => setMentionOpen(false)}
+              className="text-muted-foreground hover:text-foreground text-xs"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
