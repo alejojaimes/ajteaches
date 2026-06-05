@@ -62,7 +62,14 @@ export function TiptapEditor({ postId, initialTitle = '', initialContent = null,
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        heading: { levels: [1, 2, 3] },
+        link: {
+          openOnClick: false,
+          autolink: true,
+          HTMLAttributes: { rel: 'noopener noreferrer', target: '_blank' },
+        },
+      }),
       Placeholder.configure({ placeholder: 'Tell your story...' }),
       CharacterCount,
     ],

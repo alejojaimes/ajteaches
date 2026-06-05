@@ -249,6 +249,18 @@
   color: var(--muted-foreground);
 }
 
+.tiptap-editor u {
+  text-decoration-color: var(--muted-foreground);
+  text-underline-offset: 2px;
+}
+
+.tiptap-editor mark {
+  background: var(--primary-soft);
+  color: var(--primary);
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
 .tiptap-editor p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   color: var(--muted-foreground);
