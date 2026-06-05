@@ -197,6 +197,7 @@ export function TiptapEditor({
     try {
       const form = new FormData();
       form.append('file', file);
+      form.append('postId', postId);
       const res = await fetch('/api/upload', { method: 'POST', body: form });
       if (!res.ok) throw new Error('Upload failed');
       const { url } = (await res.json()) as { url: string };

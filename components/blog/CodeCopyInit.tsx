@@ -10,9 +10,12 @@ export function CodeCopyInit() {
         const code = btn.closest('.code-block-wrapper')?.querySelector('code');
         if (!code) return;
         void navigator.clipboard.writeText(code.innerText).then(() => {
-          btn.textContent = 'Copied!';
+          const label = btn.querySelector('.code-copy-label');
+          if (label) label.textContent = 'Copied!';
+          btn.classList.add('copied');
           setTimeout(() => {
-            btn.textContent = 'Copy';
+            if (label) label.textContent = 'Copy';
+            btn.classList.remove('copied');
           }, 1500);
         });
       });

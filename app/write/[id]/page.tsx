@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db/client';
 import { updatePost, publishPost } from '@/lib/actions/posts';
 import { TiptapEditor, type SavePayload } from '@/components/editor/TiptapEditor';
 import { PublishButton } from '@/components/editor/PublishButton';
+import { ShareDraftButton } from '@/components/editor/ShareDraftButton';
 
 export default async function WritePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -44,7 +45,10 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
           <Link href="/" className="text-foreground text-sm font-medium">
             ajteaches
           </Link>
-          <PublishButton action={publish} isPublished={post.status === 'published'} />
+          <div className="flex items-center gap-2">
+            <ShareDraftButton postId={post.id} />
+            <PublishButton action={publish} isPublished={post.status === 'published'} />
+          </div>
         </div>
       </header>
 
