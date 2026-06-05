@@ -37,7 +37,7 @@ export async function createPost(): Promise<never> {
 
 export async function updatePost(
   postId: string,
-  payload: { title: string; contentJson: object; wordCount: number }
+  payload: { title: string; excerpt: string; contentJson: object; wordCount: number }
 ): Promise<{ ok: true }> {
   const author = await getCurrentAuthor();
   if (!author) throw new Error('Unauthorized');
@@ -61,6 +61,7 @@ export async function updatePost(
     data: {
       title,
       slug,
+      excerpt: payload.excerpt.trim() || null,
       contentJson: payload.contentJson,
       readTimeMinutes: calcReadTime(payload.wordCount),
     },

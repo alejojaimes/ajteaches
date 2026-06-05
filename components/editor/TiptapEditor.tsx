@@ -12,6 +12,7 @@ import { createLowlight, common } from 'lowlight';
 import type { Editor } from '@tiptap/core';
 import { EmbedNode } from '@/lib/extensions/embed';
 import { EmbedCardView } from '@/components/editor/EmbedCardView';
+import { CodeBlockView } from '@/components/editor/CodeBlockView';
 import { BubbleToolbar } from '@/components/editor/BubbleToolbar';
 import { SlashMenu } from '@/components/editor/SlashMenu';
 
@@ -22,6 +23,7 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 export type SavePayload = {
   postId: string;
   title: string;
+  excerpt: string;
   contentJson: string;
   wordCount: number;
 };
@@ -29,12 +31,20 @@ export type SavePayload = {
 type Props = {
   postId: string;
   initialTitle?: string;
+  initialExcerpt?: string;
   initialContent?: object | null;
   onSave?: (payload: SavePayload) => Promise<void>;
 };
 
-export function TiptapEditor({ postId, initialTitle = '', initialContent = null, onSave }: Props) {
+export function TiptapEditor({
+  postId,
+  initialTitle = '',
+  initialExcerpt = '',
+  initialContent = null,
+  onSave,
+}: Props) {
   const [title, setTitle] = useState(initialTitle);
+  const [excerpt, setExcerpt] = useState(initialExcerpt);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [uploading, setUploading] = useState(false);
   const [mentionOpen, setMentionOpen] = useState(false);
@@ -44,6 +54,7 @@ export function TiptapEditor({ postId, initialTitle = '', initialContent = null,
   const [embedUrl, setEmbedUrl] = useState('');
   const [embedLoading, setEmbedLoading] = useState(false);
   const titleRef = useRef(title);
+  const excerptRef = useRef(excerpt);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputId = useId();
   const mentionNameId = useId();
@@ -51,6 +62,10 @@ export function TiptapEditor({ postId, initialTitle = '', initialContent = null,
   useEffect(() => {
     titleRef.current = title;
   }, [title]);
+
+  useEffect(() => {
+    excerptRef.current = excerpt;
+  }, [excerpt]);
 
   const save = useCallback(
     async (titleVal: string, editorInstance: Editor) => {
@@ -60,6 +75,7 @@ export function TiptapEditor({ postId, initialTitle = '', initialContent = null,
         await onSave({
           postId,
           title: titleVal,
+          excerpt: excerptRef.current,
           contentJson: JSON.stringify(editorInstance.getJSON()),
           wordCount: (editorInstance.storage.characterCount as { words: () => number }).words(),
         });
@@ -90,7 +106,11 @@ export function TiptapEditor({ postId, initialTitle = '', initialContent = null,
           HTMLAttributes: { rel: 'noopener noreferrer', target: '_blank' },
         },
       }),
-      CodeBlockLowlight.configure({ lowlight }),
+      CodeBlockLowlight.configure({ lowlight }).extend({
+        addNodeView() {
+          return ReactNodeViewRenderer(CodeBlockView);
+        },
+      }),
       Image.configure({ inline: false, allowBase64: false }),
       EmbedNode.extend({
         addNodeView() {
@@ -109,6 +129,11 @@ export function TiptapEditor({ postId, initialTitle = '', initialContent = null,
 
   const handleTitleChange = (value: string) => {
     setTitle(value);
+    if (editor) scheduleSave(editor);
+  };
+
+  const handleExcerptChange = (value: string) => {
+    setExcerpt(value);
     if (editor) scheduleSave(editor);
   };
 
@@ -210,12 +235,33 @@ export function TiptapEditor({ postId, initialTitle = '', initialContent = null,
         </span>
       </div>
 
-      <input
-        type="text"
+      <textarea
         value={title}
-        onChange={(e) => handleTitleChange(e.target.value)}
+        onChange={(e) => {
+          e.target.style.height = 'auto';
+          e.target.style.height = `${e.target.scrollHeight}px`;
+          handleTitleChange(e.target.value);
+        }}
+        onInput={(e) => {
+          const t = e.currentTarget;
+          t.style.height = 'auto';
+          t.style.height = `${t.scrollHeight}px`;
+        }}
         placeholder="Title"
-        className="text-foreground placeholder:text-muted-foreground mb-6 w-full bg-transparent text-4xl font-bold outline-none"
+        rows={1}
+        className="text-foreground placeholder:text-muted-foreground mb-3 w-full resize-none overflow-hidden bg-transparent text-4xl leading-tight font-bold outline-none"
+      />
+
+      <textarea
+        value={excerpt}
+        onChange={(e) => {
+          e.target.style.height = 'auto';
+          e.target.style.height = `${e.target.scrollHeight}px`;
+          handleExcerptChange(e.target.value);
+        }}
+        placeholder="Short description (excerpt)…"
+        rows={1}
+        className="text-muted-foreground placeholder:text-muted-foreground mb-6 w-full resize-none overflow-hidden bg-transparent text-lg outline-none"
       />
 
       {editor && <BubbleToolbar editor={editor} />}

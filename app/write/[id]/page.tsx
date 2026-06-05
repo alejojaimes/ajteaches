@@ -18,6 +18,7 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
     'use server';
     await updatePost(id, {
       title: payload.title,
+      excerpt: payload.excerpt,
       contentJson: JSON.parse(payload.contentJson) as object,
       wordCount: payload.wordCount,
     });
@@ -51,6 +52,7 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
         <TiptapEditor
           postId={post.id}
           initialTitle={post.title === 'Untitled' ? '' : post.title}
+          initialExcerpt={post.excerpt ?? ''}
           initialContent={content}
           onSave={save}
         />
