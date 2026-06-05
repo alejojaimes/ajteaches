@@ -7,8 +7,11 @@ import { Placeholder } from '@tiptap/extension-placeholder';
 import { CharacterCount } from '@tiptap/extension-character-count';
 import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight';
 import { Image } from '@tiptap/extension-image';
+import { ReactNodeViewRenderer } from '@tiptap/react';
 import { createLowlight, common } from 'lowlight';
 import type { Editor } from '@tiptap/core';
+import { EmbedNode } from '@/lib/extensions/embed';
+import { EmbedCardView } from '@/components/editor/EmbedCardView';
 
 const lowlight = createLowlight(common);
 
@@ -35,6 +38,9 @@ export function TiptapEditor({ postId, initialTitle = '', initialContent = null,
   const [mentionOpen, setMentionOpen] = useState(false);
   const [mentionName, setMentionName] = useState('');
   const [mentionUrl, setMentionUrl] = useState('');
+  const [embedOpen, setEmbedOpen] = useState(false);
+  const [embedUrl, setEmbedUrl] = useState('');
+  const [embedLoading, setEmbedLoading] = useState(false);
   const titleRef = useRef(title);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputId = useId();
@@ -84,6 +90,11 @@ export function TiptapEditor({ postId, initialTitle = '', initialContent = null,
       }),
       CodeBlockLowlight.configure({ lowlight }),
       Image.configure({ inline: false, allowBase64: false }),
+      EmbedNode.extend({
+        addNodeView() {
+          return ReactNodeViewRenderer(EmbedCardView);
+        },
+      }),
       Placeholder.configure({ placeholder: 'Tell your story...' }),
       CharacterCount,
     ],
@@ -118,6 +129,39 @@ export function TiptapEditor({ postId, initialTitle = '', initialContent = null,
     setMentionName('');
     setMentionUrl('');
     setMentionOpen(false);
+  };
+
+  const insertEmbed = async () => {
+    if (!editor || !embedUrl.trim() || embedLoading) return;
+    setEmbedLoading(true);
+    try {
+      const res = await fetch(`/api/og?url=${encodeURIComponent(embedUrl.trim())}`);
+      const data = (await res.json()) as {
+        url: string;
+        title: string;
+        description: string;
+        image: string;
+      };
+      editor
+        .chain()
+        .focus()
+        .insertContent({
+          type: 'embedCard',
+          attrs: {
+            url: data.url,
+            title: data.title ?? '',
+            description: data.description ?? '',
+            image: data.image ?? '',
+          },
+        })
+        .run();
+      setEmbedUrl('');
+      setEmbedOpen(false);
+    } catch {
+      // silent
+    } finally {
+      setEmbedLoading(false);
+    }
   };
 
   const handleImageUpload = async (file: File) => {
@@ -201,6 +245,13 @@ export function TiptapEditor({ postId, initialTitle = '', initialContent = null,
         >
           + @Mention
         </button>
+        <button
+          type="button"
+          onClick={() => setEmbedOpen(true)}
+          className="text-muted-foreground hover:text-foreground text-xs"
+        >
+          + Embed
+        </button>
       </div>
 
       {/* Mention dialog */}
@@ -254,6 +305,41 @@ export function TiptapEditor({ postId, initialTitle = '', initialContent = null,
             <button
               type="button"
               onClick={() => setMentionOpen(false)}
+              className="text-muted-foreground hover:text-foreground text-xs"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Embed URL dialog */}
+      {embedOpen && (
+        <div className="border-border bg-card rounded-card mt-3 border p-4 shadow-md">
+          <p className="text-foreground mb-3 text-sm font-medium">Embed link</p>
+          <input
+            type="url"
+            value={embedUrl}
+            onChange={(e) => setEmbedUrl(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') void insertEmbed();
+              if (e.key === 'Escape') setEmbedOpen(false);
+            }}
+            placeholder="https://..."
+            autoFocus
+            className="border-border text-foreground focus:ring-primary mb-3 w-full rounded-md border px-3 py-1.5 text-sm outline-none focus:ring-1"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => void insertEmbed()}
+              disabled={embedLoading}
+              className="rounded-button bg-primary hover:bg-primary-hover px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+            >
+              {embedLoading ? 'Loading…' : 'Embed'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setEmbedOpen(false)}
               className="text-muted-foreground hover:text-foreground text-xs"
             >
               Cancel
