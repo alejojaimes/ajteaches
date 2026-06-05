@@ -96,6 +96,7 @@ export function TiptapEditor({ postId, initialTitle = '', initialContent = null,
   };
 
   const wordCount = editor ? (editor.storage.characterCount as { words: () => number }).words() : 0;
+  const readTime = Math.max(1, Math.ceil(wordCount / 225));
 
   const handleImageUpload = async (file: File) => {
     if (!editor || uploading) return;
@@ -114,18 +115,31 @@ export function TiptapEditor({ postId, initialTitle = '', initialContent = null,
     }
   };
 
-  const statusLabel: Record<SaveStatus, string> = {
-    idle: 'Draft',
-    saving: 'Saving...',
-    saved: 'Draft · Saved',
-    error: 'Error saving',
-  };
+  const statusNode = (() => {
+    if (saveStatus === 'saving') {
+      return <span className="text-muted-foreground text-sm">Saving...</span>;
+    }
+    if (saveStatus === 'saved') {
+      return (
+        <span className="flex items-center gap-1.5 text-sm">
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          <span className="text-muted-foreground">Draft · Saved · just now</span>
+        </span>
+      );
+    }
+    if (saveStatus === 'error') {
+      return <span className="text-destructive text-sm">Error saving</span>;
+    }
+    return <span className="text-muted-foreground text-sm">Draft</span>;
+  })();
 
   return (
     <div className="mx-auto max-w-[700px] py-12">
       <div className="mb-8 flex items-center justify-between">
-        <span className="text-muted-foreground text-sm">{statusLabel[saveStatus]}</span>
-        <span className="text-muted-foreground text-xs">{wordCount} words</span>
+        {statusNode}
+        <span className="text-muted-foreground text-xs">
+          {wordCount} words · {readTime} min read
+        </span>
       </div>
 
       <input
