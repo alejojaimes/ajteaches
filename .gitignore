@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+.env.local
 
 # vercel
 .vercel
@@ -42,3 +43,6 @@ next-env.d.ts
 
 # Claude File
 ajteaches_execution_plan.md
+
+# Prisma Settings
+/lib/generated/prisma
