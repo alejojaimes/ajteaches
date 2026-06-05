@@ -1,7 +1,8 @@
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { getCurrentAuthor } from '@/lib/auth/get-current-author';
 import { prisma } from '@/lib/db/client';
+import { createPost } from '@/lib/actions/posts';
 
 export default async function FeedPage() {
   const author = await getCurrentAuthor();
@@ -16,12 +17,14 @@ export default async function FeedPage() {
     <div>
       <header className="mb-8 flex items-center justify-between">
         <h1 className="text-foreground text-3xl font-bold">Your Posts</h1>
-        <Link
-          href="/write"
-          className="rounded-button bg-primary hover:bg-primary-hover px-4 py-2 text-sm font-medium text-white"
-        >
-          + New Post
-        </Link>
+        <form action={createPost}>
+          <button
+            type="submit"
+            className="rounded-button bg-primary hover:bg-primary-hover px-4 py-2 text-sm font-medium text-white"
+          >
+            + New Post
+          </button>
+        </form>
       </header>
       <div className="space-y-4">
         {posts.length === 0 ? (
@@ -30,7 +33,7 @@ export default async function FeedPage() {
           posts.map((post) => (
             <article key={post.id} className="rounded-card border-border bg-card border p-4">
               <div className="flex items-start justify-between">
-                <div>
+                <div className="min-w-0 flex-1">
                   <h3 className="text-foreground font-medium">{post.title}</h3>
                   {post.excerpt && (
                     <p className="text-muted-foreground mt-1 text-sm">{post.excerpt}</p>
@@ -43,6 +46,12 @@ export default async function FeedPage() {
                     <span>{post.readTimeMinutes} min read</span>
                   </div>
                 </div>
+                <Link
+                  href={`/write/${post.id}`}
+                  className="text-muted-foreground hover:text-primary ml-4 shrink-0 text-sm"
+                >
+                  Edit
+                </Link>
               </div>
             </article>
           ))

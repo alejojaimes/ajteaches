@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getPostBySlug, getPublishedPosts } from '@/lib/db/posts';
+import { renderPostHTML } from '@/lib/render-post';
 
 export async function generateStaticParams() {
   const posts = await getPublishedPosts({ limit: 1000 });
@@ -27,9 +28,14 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
       <h1 className="text-foreground mb-4 text-4xl font-bold">{post.title}</h1>
       <div className="text-muted-foreground mb-8 text-sm">{post.author.name}</div>
       {post.excerpt && <p className="text-muted-foreground mb-8 text-lg">{post.excerpt}</p>}
-      <div className="prose prose-lg">
-        <p>Content coming soon. Tiptap editor will be added in Phase 4.</p>
-      </div>
+      {post.contentJson &&
+      typeof post.contentJson === 'object' &&
+      !Array.isArray(post.contentJson) ? (
+        <div
+          className="tiptap-editor"
+          dangerouslySetInnerHTML={{ __html: renderPostHTML(post.contentJson as object) }}
+        />
+      ) : null}
     </article>
   );
 }
