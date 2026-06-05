@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentAuthor } from '@/lib/auth/get-current-author';
 import { prisma } from '@/lib/db/client';
@@ -32,7 +33,7 @@ export default async function FeedPage() {
           posts.map((post) => (
             <article key={post.id} className="rounded-card border-border bg-card border p-4">
               <div className="flex items-start justify-between">
-                <div>
+                <div className="min-w-0 flex-1">
                   <h3 className="text-foreground font-medium">{post.title}</h3>
                   {post.excerpt && (
                     <p className="text-muted-foreground mt-1 text-sm">{post.excerpt}</p>
@@ -45,6 +46,12 @@ export default async function FeedPage() {
                     <span>{post.readTimeMinutes} min read</span>
                   </div>
                 </div>
+                <Link
+                  href={`/write/${post.id}`}
+                  className="text-muted-foreground hover:text-primary ml-4 shrink-0 text-sm"
+                >
+                  Edit
+                </Link>
               </div>
             </article>
           ))
