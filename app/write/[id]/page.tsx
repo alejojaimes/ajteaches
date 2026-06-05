@@ -2,8 +2,9 @@ import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getCurrentAuthor } from '@/lib/auth/get-current-author';
 import { prisma } from '@/lib/db/client';
-import { updatePost } from '@/lib/actions/posts';
+import { updatePost, publishPost } from '@/lib/actions/posts';
 import { TiptapEditor, type SavePayload } from '@/components/editor/TiptapEditor';
+import { PublishButton } from '@/components/editor/PublishButton';
 
 export default async function WritePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -22,6 +23,11 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
     });
   }
 
+  async function publish() {
+    'use server';
+    await publishPost(id);
+  }
+
   const content =
     post.contentJson && typeof post.contentJson === 'object' && !Array.isArray(post.contentJson)
       ? (post.contentJson as object)
@@ -37,7 +43,7 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
           <Link href="/" className="text-foreground text-sm font-medium">
             ajteaches
           </Link>
-          <div className="w-20" />
+          <PublishButton action={publish} isPublished={post.status === 'published'} />
         </div>
       </header>
 
