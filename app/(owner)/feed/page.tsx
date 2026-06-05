@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
 import { getCurrentAuthor } from '@/lib/auth/get-current-author';
 import { prisma } from '@/lib/db/client';
+import { createPost } from '@/lib/actions/posts';
 
 export default async function FeedPage() {
   const author = await getCurrentAuthor();
@@ -16,12 +16,14 @@ export default async function FeedPage() {
     <div>
       <header className="mb-8 flex items-center justify-between">
         <h1 className="text-foreground text-3xl font-bold">Your Posts</h1>
-        <Link
-          href="/write"
-          className="rounded-button bg-primary hover:bg-primary-hover px-4 py-2 text-sm font-medium text-white"
-        >
-          + New Post
-        </Link>
+        <form action={createPost}>
+          <button
+            type="submit"
+            className="rounded-button bg-primary hover:bg-primary-hover px-4 py-2 text-sm font-medium text-white"
+          >
+            + New Post
+          </button>
+        </form>
       </header>
       <div className="space-y-4">
         {posts.length === 0 ? (
