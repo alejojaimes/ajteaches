@@ -13,6 +13,7 @@ import type { Editor } from '@tiptap/core';
 import { EmbedNode } from '@/lib/extensions/embed';
 import { EmbedCardView } from '@/components/editor/EmbedCardView';
 import { BubbleToolbar } from '@/components/editor/BubbleToolbar';
+import { SlashMenu } from '@/components/editor/SlashMenu';
 
 const lowlight = createLowlight(common);
 
@@ -218,6 +219,13 @@ export function TiptapEditor({ postId, initialTitle = '', initialContent = null,
       />
 
       {editor && <BubbleToolbar editor={editor} />}
+      {editor && (
+        <SlashMenu
+          editor={editor}
+          onImageClick={() => document.getElementById(fileInputId)?.click()}
+          onEmbedClick={() => setEmbedOpen(true)}
+        />
+      )}
       <EditorContent editor={editor} />
 
       {/* Hidden file input for image upload */}
