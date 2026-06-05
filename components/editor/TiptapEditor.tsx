@@ -22,7 +22,7 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 export type SavePayload = {
   postId: string;
   title: string;
-  contentJson: object;
+  contentJson: string;
   wordCount: number;
 };
 
@@ -60,7 +60,7 @@ export function TiptapEditor({ postId, initialTitle = '', initialContent = null,
         await onSave({
           postId,
           title: titleVal,
-          contentJson: editorInstance.getJSON(),
+          contentJson: JSON.stringify(editorInstance.getJSON()),
           wordCount: (editorInstance.storage.characterCount as { words: () => number }).words(),
         });
         setSaveStatus('saved');

@@ -18,7 +18,7 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
     'use server';
     await updatePost(id, {
       title: payload.title,
-      contentJson: payload.contentJson,
+      contentJson: JSON.parse(payload.contentJson) as object,
       wordCount: payload.wordCount,
     });
   }
