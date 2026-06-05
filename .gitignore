@@ -42,7 +42,9 @@ yarn-error.log*
 next-env.d.ts
 
 # Claude File
-ajteaches_execution_plan.md
+docs/brand.md
+docs/plan.md
+docs/spec.md
 
 # Prisma Settings
 /lib/generated/prisma
