@@ -12,6 +12,7 @@ import { createLowlight, common } from 'lowlight';
 import type { Editor } from '@tiptap/core';
 import { EmbedNode } from '@/lib/extensions/embed';
 import { EmbedCardView } from '@/components/editor/EmbedCardView';
+import { BubbleToolbar } from '@/components/editor/BubbleToolbar';
 
 const lowlight = createLowlight(common);
 
@@ -216,6 +217,7 @@ export function TiptapEditor({ postId, initialTitle = '', initialContent = null,
         className="text-foreground placeholder:text-muted-foreground mb-6 w-full bg-transparent text-4xl font-bold outline-none"
       />
 
+      {editor && <BubbleToolbar editor={editor} />}
       <EditorContent editor={editor} />
 
       {/* Hidden file input for image upload */}
