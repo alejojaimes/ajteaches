@@ -136,25 +136,23 @@ export function SlashMenu({ editor, onImageClick, onEmbedClick }: Props) {
           +
         </button>
 
-        {/* P8: open upward with smooth entry animation */}
+        {/* Horizontal slide-right strip */}
         <div
-          className={`border-border bg-card absolute top-auto bottom-8 left-0 z-50 w-52 rounded-lg border p-1 shadow-lg transition-all duration-150 ease-out ${
+          className={`absolute top-1/2 left-8 z-50 flex -translate-y-1/2 flex-row items-center gap-1 transition-all duration-200 ease-out ${
             open
-              ? 'pointer-events-auto translate-y-0 opacity-100'
-              : 'pointer-events-none translate-y-1 opacity-0'
+              ? 'pointer-events-auto translate-x-0 opacity-100'
+              : 'pointer-events-none -translate-x-2 opacity-0'
           }`}
         >
           {items.map((item) => (
             <button
               key={item.description}
               type="button"
+              title={item.description}
               onClick={() => exec(item)}
-              className="hover:bg-primary-soft hover:text-primary flex w-full items-center gap-3 rounded px-3 py-1.5 text-left text-sm"
+              className="hover:bg-primary-soft hover:text-primary text-muted-foreground flex h-7 w-7 items-center justify-center rounded font-mono text-xs transition"
             >
-              <span className="text-muted-foreground w-5 text-center font-mono text-xs">
-                {item.label}
-              </span>
-              <span className="text-foreground">{item.description}</span>
+              {item.label}
             </button>
           ))}
         </div>
