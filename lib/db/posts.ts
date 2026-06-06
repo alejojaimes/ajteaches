@@ -12,13 +12,13 @@ export async function getPublishedPosts({
     },
     orderBy: { publishedAt: 'desc' },
     take: limit,
-    include: { author: true },
+    include: { author: true, tags: true },
   });
 }
 
 export async function getPostBySlug(slug: string) {
   return prisma.post.findUnique({
     where: { slug, deletedAt: null },
-    include: { author: true },
+    include: { author: true, tags: true },
   });
 }

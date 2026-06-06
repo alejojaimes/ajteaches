@@ -37,7 +37,13 @@ export async function createPost(): Promise<never> {
 
 export async function updatePost(
   postId: string,
-  payload: { title: string; excerpt: string; contentJson: object; wordCount: number }
+  payload: {
+    title: string;
+    excerpt: string;
+    contentJson: object;
+    wordCount: number;
+    tags?: string[];
+  }
 ): Promise<{ ok: true }> {
   const author = await getCurrentAuthor();
   if (!author) throw new Error('Unauthorized');
@@ -64,10 +70,25 @@ export async function updatePost(
       excerpt: payload.excerpt.trim() || null,
       contentJson: payload.contentJson,
       readTimeMinutes: calcReadTime(payload.wordCount),
+      ...(payload.tags !== undefined
+        ? {
+            tags: {
+              set: [],
+              connectOrCreate: payload.tags.map((name) => ({
+                where: { name },
+                create: { name },
+              })),
+            },
+          }
+        : {}),
     },
   });
 
   return { ok: true };
+}
+
+export async function getTags() {
+  return prisma.tag.findMany({ orderBy: { name: 'asc' } });
 }
 
 export async function publishPost(postId: string): Promise<never> {

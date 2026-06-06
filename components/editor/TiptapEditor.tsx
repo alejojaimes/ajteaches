@@ -26,6 +26,7 @@ export type SavePayload = {
   excerpt: string;
   contentJson: string;
   wordCount: number;
+  tags: string[];
 };
 
 type Props = {
@@ -33,6 +34,8 @@ type Props = {
   initialTitle?: string;
   initialExcerpt?: string;
   initialContent?: object | null;
+  initialTags?: string[];
+  allTags?: string[];
   onSave?: (payload: SavePayload) => Promise<void>;
 };
 
@@ -41,10 +44,14 @@ export function TiptapEditor({
   initialTitle = '',
   initialExcerpt = '',
   initialContent = null,
+  initialTags = [],
+  allTags = [],
   onSave,
 }: Props) {
   const [title, setTitle] = useState(initialTitle);
   const [excerpt, setExcerpt] = useState(initialExcerpt);
+  const [tags, setTags] = useState<string[]>(initialTags);
+  const [tagInput, setTagInput] = useState('');
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [uploading, setUploading] = useState(false);
   const [mentionOpen, setMentionOpen] = useState(false);
@@ -55,6 +62,7 @@ export function TiptapEditor({
   const [embedLoading, setEmbedLoading] = useState(false);
   const titleRef = useRef(title);
   const excerptRef = useRef(excerpt);
+  const tagsRef = useRef(tags);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputId = useId();
   const mentionNameId = useId();
@@ -67,6 +75,24 @@ export function TiptapEditor({
     excerptRef.current = excerpt;
   }, [excerpt]);
 
+  useEffect(() => {
+    tagsRef.current = tags;
+  }, [tags]);
+
+  const addTag = (raw: string) => {
+    const name = raw.trim().toLowerCase().replace(/,/g, '');
+    if (!name || tags.includes(name)) return;
+    setTags((prev) => [...prev, name]);
+  };
+
+  const removeTag = (name: string) => {
+    setTags((prev) => prev.filter((t) => t !== name));
+  };
+
+  const suggestions = allTags.filter(
+    (t) => !tags.includes(t) && t.includes(tagInput.trim().toLowerCase())
+  );
+
   const save = useCallback(
     async (titleVal: string, editorInstance: Editor) => {
       if (!onSave) return;
@@ -78,6 +104,7 @@ export function TiptapEditor({
           excerpt: excerptRef.current,
           contentJson: JSON.stringify(editorInstance.getJSON()),
           wordCount: (editorInstance.storage.characterCount as { words: () => number }).words(),
+          tags: tagsRef.current,
         });
         setSaveStatus('saved');
       } catch {
@@ -135,6 +162,19 @@ export function TiptapEditor({
   const handleExcerptChange = (value: string) => {
     setExcerpt(value);
     if (editor) scheduleSave(editor);
+  };
+
+  const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addTag(tagInput);
+      setTagInput('');
+      if (editor) scheduleSave(editor);
+    } else if (e.key === 'Backspace' && tagInput === '' && tags.length > 0) {
+      const last = tags[tags.length - 1];
+      if (last) removeTag(last);
+      if (editor) scheduleSave(editor);
+    }
   };
 
   const wordCount = editor ? (editor.storage.characterCount as { words: () => number }).words() : 0;
@@ -262,8 +302,67 @@ export function TiptapEditor({
         }}
         placeholder="Short description (excerpt)…"
         rows={1}
-        className="text-muted-foreground placeholder:text-muted-foreground mb-6 w-full resize-none overflow-hidden bg-transparent text-lg outline-none"
+        className="text-muted-foreground placeholder:text-muted-foreground mb-4 w-full resize-none overflow-hidden bg-transparent text-lg outline-none"
       />
+
+      {/* Tag input */}
+      <div className="mb-6">
+        <div className="border-border flex min-h-[36px] flex-wrap items-center gap-1.5 rounded-md border px-2 py-1.5">
+          {tags.map((tag) => (
+            <span
+              key={tag}
+              className="bg-primary-soft text-primary flex items-center gap-1 rounded-full px-2 py-0.5 text-xs"
+            >
+              {tag}
+              <button
+                type="button"
+                onClick={() => {
+                  removeTag(tag);
+                  if (editor) scheduleSave(editor);
+                }}
+                className="hover:text-primary/70 leading-none"
+                aria-label={`Remove tag ${tag}`}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+          <input
+            type="text"
+            value={tagInput}
+            onChange={(e) => setTagInput(e.target.value)}
+            onKeyDown={handleTagKeyDown}
+            onBlur={() => {
+              if (tagInput.trim()) {
+                addTag(tagInput);
+                setTagInput('');
+                if (editor) scheduleSave(editor);
+              }
+            }}
+            placeholder={tags.length === 0 ? 'Add tags (press Enter or comma)…' : ''}
+            className="text-foreground placeholder:text-muted-foreground min-w-[120px] flex-1 bg-transparent text-sm outline-none"
+          />
+        </div>
+        {tagInput.trim() && suggestions.length > 0 && (
+          <div className="border-border bg-card rounded-card mt-1 border shadow-sm">
+            {suggestions.slice(0, 6).map((s) => (
+              <button
+                key={s}
+                type="button"
+                className="text-foreground hover:bg-primary-soft w-full px-3 py-1.5 text-left text-sm"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  addTag(s);
+                  setTagInput('');
+                  if (editor) scheduleSave(editor);
+                }}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {editor && <BubbleToolbar editor={editor} />}
       {editor && (
