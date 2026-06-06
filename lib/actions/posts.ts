@@ -84,7 +84,23 @@ export async function updatePost(
     },
   });
 
+  if (post.status === 'published') {
+    revalidatePath('/');
+    revalidatePath(`/posts/${slug}`);
+  }
+
   return { ok: true };
+}
+
+export async function republishPost(postId: string): Promise<void> {
+  const author = await getCurrentAuthor();
+  if (!author) redirect('/sign-in');
+
+  const post = await prisma.post.findUnique({ where: { id: postId } });
+  if (!post || post.authorId !== author.id || post.status !== 'published') return;
+
+  revalidatePath('/');
+  revalidatePath(`/posts/${post.slug}`);
 }
 
 export async function getTags() {
