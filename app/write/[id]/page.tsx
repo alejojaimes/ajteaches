@@ -2,7 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getCurrentAuthor } from '@/lib/auth/get-current-author';
 import { prisma } from '@/lib/db/client';
-import { updatePost, publishPost, getTags } from '@/lib/actions/posts';
+import { updatePost, publishPost, republishPost, getTags } from '@/lib/actions/posts';
 import { TiptapEditor, type SavePayload } from '@/components/editor/TiptapEditor';
 import { PublishButton } from '@/components/editor/PublishButton';
 import { ShareDraftButton } from '@/components/editor/ShareDraftButton';
@@ -36,6 +36,11 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
     await publishPost(id);
   }
 
+  async function republish() {
+    'use server';
+    await republishPost(id);
+  }
+
   const content =
     post.contentJson && typeof post.contentJson === 'object' && !Array.isArray(post.contentJson)
       ? (post.contentJson as object)
@@ -53,7 +58,11 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
           </Link>
           <div className="flex items-center gap-2">
             <ShareDraftButton postId={post.id} />
-            <PublishButton action={publish} isPublished={post.status === 'published'} />
+            <PublishButton
+              action={publish}
+              updateAction={republish}
+              isPublished={post.status === 'published'}
+            />
           </div>
         </div>
       </header>
