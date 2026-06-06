@@ -1,5 +1,6 @@
 import { getPublishedPosts } from '@/lib/db/posts';
 import { PostCard } from '@/components/blog/PostCard';
+import { NewsletterSection } from '@/components/blog/NewsletterSection';
 
 export const revalidate = 3600;
 
@@ -19,6 +20,9 @@ export default async function Home() {
           posts.map((post) => <PostCard key={post.id} post={post} />)
         )}
       </section>
+      <div className="mt-16">
+        <NewsletterSection />
+      </div>
     </div>
   );
 }

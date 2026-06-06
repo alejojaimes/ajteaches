@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FloatingMenu } from '@tiptap/react/menus';
 import type { Editor } from '@tiptap/core';
 
@@ -81,6 +81,38 @@ export function SlashMenu({ editor, onImageClick, onEmbedClick }: Props) {
     item.action();
   };
 
+  // P7: watch editor updates to detect a lone "/" typed in an empty paragraph
+  useEffect(() => {
+    if (!editor) return;
+
+    const handleUpdate = () => {
+      const { state } = editor;
+      const { selection } = state;
+      const { $anchor, empty } = selection;
+      const isRootDepth = $anchor.depth === 1;
+      const isSlashParagraph =
+        empty &&
+        isRootDepth &&
+        $anchor.parent.type.name === 'paragraph' &&
+        $anchor.parent.textContent === '/';
+
+      if (isSlashParagraph) {
+        // delete the "/" character then open the menu
+        editor
+          .chain()
+          .focus()
+          .deleteRange({ from: $anchor.pos - 1, to: $anchor.pos })
+          .run();
+        setOpen(true);
+      }
+    };
+
+    editor.on('update', handleUpdate);
+    return () => {
+      editor.off('update', handleUpdate);
+    };
+  }, [editor]);
+
   return (
     <FloatingMenu
       editor={editor}
@@ -104,23 +136,28 @@ export function SlashMenu({ editor, onImageClick, onEmbedClick }: Props) {
           +
         </button>
 
-        {open && (
-          <div className="border-border bg-card absolute top-8 left-0 z-50 w-52 rounded-lg border p-1 shadow-lg">
-            {items.map((item) => (
-              <button
-                key={item.description}
-                type="button"
-                onClick={() => exec(item)}
-                className="hover:bg-primary-soft hover:text-primary flex w-full items-center gap-3 rounded px-3 py-1.5 text-left text-sm"
-              >
-                <span className="text-muted-foreground w-5 text-center font-mono text-xs">
-                  {item.label}
-                </span>
-                <span className="text-foreground">{item.description}</span>
-              </button>
-            ))}
-          </div>
-        )}
+        {/* P8: open upward with smooth entry animation */}
+        <div
+          className={`border-border bg-card absolute top-auto bottom-8 left-0 z-50 w-52 rounded-lg border p-1 shadow-lg transition-all duration-150 ease-out ${
+            open
+              ? 'pointer-events-auto translate-y-0 opacity-100'
+              : 'pointer-events-none translate-y-1 opacity-0'
+          }`}
+        >
+          {items.map((item) => (
+            <button
+              key={item.description}
+              type="button"
+              onClick={() => exec(item)}
+              className="hover:bg-primary-soft hover:text-primary flex w-full items-center gap-3 rounded px-3 py-1.5 text-left text-sm"
+            >
+              <span className="text-muted-foreground w-5 text-center font-mono text-xs">
+                {item.label}
+              </span>
+              <span className="text-foreground">{item.description}</span>
+            </button>
+          ))}
+        </div>
       </div>
     </FloatingMenu>
   );
