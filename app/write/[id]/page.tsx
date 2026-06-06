@@ -2,7 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getCurrentAuthor } from '@/lib/auth/get-current-author';
 import { prisma } from '@/lib/db/client';
-import { updatePost, publishPost } from '@/lib/actions/posts';
+import { updatePost, publishPost, getTags } from '@/lib/actions/posts';
 import { TiptapEditor, type SavePayload } from '@/components/editor/TiptapEditor';
 import { PublishButton } from '@/components/editor/PublishButton';
 import { ShareDraftButton } from '@/components/editor/ShareDraftButton';
@@ -12,8 +12,13 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
   const author = await getCurrentAuthor();
   if (!author) redirect('/sign-in');
 
-  const post = await prisma.post.findUnique({ where: { id, deletedAt: null } });
+  const post = await prisma.post.findUnique({
+    where: { id, deletedAt: null },
+    include: { tags: true },
+  });
   if (!post || post.authorId !== author.id) notFound();
+
+  const allTags = await getTags();
 
   async function save(payload: SavePayload) {
     'use server';
@@ -22,6 +27,7 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
       excerpt: payload.excerpt,
       contentJson: JSON.parse(payload.contentJson) as object,
       wordCount: payload.wordCount,
+      tags: payload.tags,
     });
   }
 
@@ -58,6 +64,8 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
           initialTitle={post.title === 'Untitled' ? '' : post.title}
           initialExcerpt={post.excerpt ?? ''}
           initialContent={content}
+          initialTags={(post.tags ?? []).map((t) => t.name)}
+          allTags={allTags.map((t) => t.name)}
           onSave={save}
         />
       </main>
