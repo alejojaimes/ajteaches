@@ -20,12 +20,6 @@ export function Header() {
           >
             Tutorials
           </Link>
-          <Link
-            href="/sign-in"
-            className="rounded-button border-primary text-primary hover:bg-primary-soft border px-3 py-1 text-sm"
-          >
-            Sign in
-          </Link>
         </nav>
       </div>
     </header>
