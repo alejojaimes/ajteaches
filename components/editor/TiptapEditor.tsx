@@ -80,8 +80,8 @@ export function TiptapEditor({
   }, [tags]);
 
   const addTag = (raw: string) => {
-    const name = raw.trim().toLowerCase().replace(/,/g, '');
-    if (!name || tags.includes(name)) return;
+    const name = raw.trim().replace(/,/g, '');
+    if (!name || tags.some((t) => t.toLowerCase() === name.toLowerCase())) return;
     setTags((prev) => [...prev, name]);
   };
 
@@ -90,7 +90,9 @@ export function TiptapEditor({
   };
 
   const suggestions = allTags.filter(
-    (t) => !tags.includes(t) && t.includes(tagInput.trim().toLowerCase())
+    (t) =>
+      !tags.some((tag) => tag.toLowerCase() === t.toLowerCase()) &&
+      t.toLowerCase().includes(tagInput.trim().toLowerCase())
   );
 
   const save = useCallback(
