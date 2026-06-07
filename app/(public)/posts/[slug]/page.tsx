@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { getPostBySlug, getPublishedPosts } from '@/lib/db/posts';
 import { renderPostHTML } from '@/lib/render-post';
 import { CodeCopyInit } from '@/components/blog/CodeCopyInit';
+import { ReadingTracker } from '@/components/blog/ReadingTracker';
 
 export async function generateStaticParams() {
   const posts = await getPublishedPosts({ limit: 1000 });
@@ -60,6 +61,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
       ) : null}
 
       <CodeCopyInit />
+      <ReadingTracker postId={post.id} />
     </article>
   );
 }
