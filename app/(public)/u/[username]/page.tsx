@@ -1,7 +1,10 @@
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import { prisma } from '@/lib/db/client';
 import { ShareProfileButton } from '@/components/profile/ShareProfileButton';
 import { Reveal } from '@/components/profile/Reveal';
+
+const FEATURED_POST_SLUG = 'understanding-python-decorators-from-zero-to-practical-use';
 
 export default async function PublicProfilePage({
   params,
@@ -9,7 +12,20 @@ export default async function PublicProfilePage({
   params: Promise<{ username: string }>;
 }) {
   const { username } = await params;
-  const author = await prisma.author.findUnique({ where: { username } });
+  const [author, featuredPost] = await Promise.all([
+    prisma.author.findUnique({ where: { username } }),
+    prisma.post.findFirst({
+      where: { slug: FEATURED_POST_SLUG, status: 'published' },
+      select: {
+        slug: true,
+        title: true,
+        excerpt: true,
+        coverImage: true,
+        readTimeMinutes: true,
+        readTimeOverride: true,
+      },
+    }),
+  ]);
   if (!author) notFound();
 
   const joinedDate = author.createdAt.toLocaleDateString('en-US', {
@@ -121,8 +137,43 @@ export default async function PublicProfilePage({
         </Reveal>
       )}
 
+      {/* Featured post */}
+      {featuredPost && (
+        <Reveal delay={0.2} className="mt-6">
+          <h2 className="text-foreground mb-2 text-sm font-semibold">Featured writing</h2>
+          <Link href={`/posts/${featuredPost.slug}`} className="block">
+            <article className="group rounded-card border-border bg-card flex items-start gap-4 border p-5 transition hover:-translate-y-0.5 hover:shadow-md">
+              {featuredPost.coverImage && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={featuredPost.coverImage}
+                  alt=""
+                  className="h-16 w-24 flex-shrink-0 rounded-md object-cover"
+                />
+              )}
+              <div className="min-w-0 flex-1">
+                <span className="rounded-badge bg-accent/10 text-accent mb-2 inline-block px-2 py-0.5 text-[11px] font-semibold tracking-wide uppercase">
+                  Featured
+                </span>
+                <h3 className="text-foreground group-hover:text-primary line-clamp-2 text-base font-bold transition-colors">
+                  {featuredPost.title}
+                </h3>
+                {featuredPost.excerpt && (
+                  <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">
+                    {featuredPost.excerpt}
+                  </p>
+                )}
+                <p className="text-muted-foreground mt-2 text-xs">
+                  {featuredPost.readTimeOverride ?? featuredPost.readTimeMinutes} min read
+                </p>
+              </div>
+            </article>
+          </Link>
+        </Reveal>
+      )}
+
       {/* Info links */}
-      <Reveal delay={0.2} className="border-border bg-card rounded-card mt-6 border p-5">
+      <Reveal delay={0.25} className="border-border bg-card rounded-card mt-6 border p-5">
         <h2 className="text-foreground mb-3 text-sm font-semibold">Information</h2>
         <div className="space-y-3">
           {author.website && (
