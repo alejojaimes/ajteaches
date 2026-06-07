@@ -1,12 +1,9 @@
 'use client';
 
 import { motion } from 'motion/react';
+import type { WorkEntry } from '@/lib/actions/authors';
 
-export type WorkEntry = {
-  role: string;
-  company: string;
-  period: string;
-};
+export type { WorkEntry };
 
 type Props = {
   items: WorkEntry[];

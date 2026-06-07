@@ -4,6 +4,16 @@ import { redirect } from 'next/navigation';
 import { getCurrentAuthor } from '@/lib/auth/get-current-author';
 import { prisma } from '@/lib/db/client';
 
+export type WorkEntry = {
+  role: string;
+  company: string;
+  period: string;
+};
+
+export function toWorkEntries(value: unknown): WorkEntry[] {
+  return Array.isArray(value) ? (value as WorkEntry[]) : [];
+}
+
 export async function updateAuthor(payload: {
   name: string;
   bio: string;
@@ -15,6 +25,7 @@ export async function updateAuthor(payload: {
   location: string;
   roles: string[];
   interests: string[];
+  workHistory: WorkEntry[];
   featuredPostSlug: string | null;
   avatar?: string;
 }): Promise<{ ok: true }> {
@@ -34,6 +45,13 @@ export async function updateAuthor(payload: {
       location: payload.location.trim() || null,
       roles: payload.roles,
       interests: payload.interests,
+      workHistory: payload.workHistory
+        .filter((entry) => entry.role.trim() || entry.company.trim() || entry.period.trim())
+        .map((entry) => ({
+          role: entry.role.trim(),
+          company: entry.company.trim(),
+          period: entry.period.trim(),
+        })),
       featuredPostSlug: payload.featuredPostSlug,
       ...(payload.avatar ? { avatar: payload.avatar } : {}),
     },

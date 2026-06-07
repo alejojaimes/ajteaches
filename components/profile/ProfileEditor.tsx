@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { updateAuthor } from '@/lib/actions/authors';
+import { updateAuthor, toWorkEntries, type WorkEntry } from '@/lib/actions/authors';
 import { FeaturedPostPicker, type FeaturedPostOption } from './FeaturedPostPicker';
 
 type Author = {
@@ -18,6 +18,7 @@ type Author = {
   location: string | null;
   roles: string[];
   interests: string[];
+  workHistory: unknown;
   featuredPostSlug: string | null;
 };
 
@@ -112,6 +113,78 @@ function ChipField({
   );
 }
 
+function WorkHistoryField({
+  values,
+  onChange,
+}: {
+  values: WorkEntry[];
+  onChange: (next: WorkEntry[]) => void;
+}) {
+  const update = (index: number, patch: Partial<WorkEntry>) => {
+    onChange(values.map((entry, i) => (i === index ? { ...entry, ...patch } : entry)));
+  };
+
+  const remove = (index: number) => {
+    onChange(values.filter((_, i) => i !== index));
+  };
+
+  const add = () => {
+    onChange([...values, { role: '', company: '', period: '' }]);
+  };
+
+  return (
+    <div>
+      <label className={labelClass}>Work experience</label>
+      <div className="space-y-3">
+        {values.map((entry, i) => (
+          <div key={i} className="border-border bg-background rounded-button border p-3">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <input
+                type="text"
+                value={entry.role}
+                onChange={(e) => update(i, { role: e.target.value })}
+                placeholder="Role"
+                className={inputClass}
+              />
+              <input
+                type="text"
+                value={entry.company}
+                onChange={(e) => update(i, { company: e.target.value })}
+                placeholder="Company"
+                className={inputClass}
+              />
+              <input
+                type="text"
+                value={entry.period}
+                onChange={(e) => update(i, { period: e.target.value })}
+                placeholder="e.g. Feb 2026 — Present"
+                className={inputClass}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => remove(i)}
+              className="text-muted-foreground hover:text-destructive mt-2 text-xs font-medium"
+            >
+              Remove
+            </button>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={add}
+        className="border-border text-muted-foreground hover:border-primary hover:text-primary rounded-button mt-3 w-full border border-dashed px-3 py-2 text-sm transition-colors"
+      >
+        + Add work experience
+      </button>
+      <p className="text-muted-foreground mt-1 text-xs">
+        Shown as a timeline on your About page, in this order.
+      </p>
+    </div>
+  );
+}
+
 export function ProfileEditor({ author, featuredPost }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatar, setAvatar] = useState(author.avatar);
@@ -128,6 +201,9 @@ export function ProfileEditor({ author, featuredPost }: Props) {
   const [linkedinUrl, setLinkedinUrl] = useState(author.linkedinUrl ?? '');
   const [roles, setRoles] = useState<string[]>(author.roles);
   const [interests, setInterests] = useState<string[]>(author.interests);
+  const [workHistory, setWorkHistory] = useState<WorkEntry[]>(() =>
+    toWorkEntries(author.workHistory)
+  );
   const [featuredPostSlug, setFeaturedPostSlug] = useState<string | null>(author.featuredPostSlug);
   const [featuredPostPreview, setFeaturedPostPreview] = useState<FeaturedPostSummary | null>(
     featuredPost
@@ -187,6 +263,7 @@ export function ProfileEditor({ author, featuredPost }: Props) {
         linkedinUrl,
         roles,
         interests,
+        workHistory,
         featuredPostSlug,
         ...(avatar && avatar !== author.avatar ? { avatar } : {}),
       });
@@ -359,6 +436,9 @@ export function ProfileEditor({ author, featuredPost }: Props) {
           placeholder="Add interests (press Enter or comma)…"
           chipClassName="bg-accent/10 text-accent"
         />
+
+        {/* Work history */}
+        <WorkHistoryField values={workHistory} onChange={setWorkHistory} />
 
         {/* Featured post */}
         <div>

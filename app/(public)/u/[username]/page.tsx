@@ -3,23 +3,8 @@ import Link from 'next/link';
 import { prisma } from '@/lib/db/client';
 import { ShareProfileButton } from '@/components/profile/ShareProfileButton';
 import { Reveal } from '@/components/profile/Reveal';
-import { WorkTimeline, type WorkEntry } from '@/components/profile/WorkTimeline';
-
-const WORK_HISTORY: WorkEntry[] = [
-  { role: 'AI Engineer', company: 'GFT Technologies', period: 'Feb 2026 — Present' },
-  { role: 'Senior Data Engineer', company: 'GFT Technologies', period: 'Apr 2025 — Jan 2026' },
-  { role: 'Tech Lead', company: 'GFT Technologies', period: 'Oct 2024 — Mar 2025' },
-  {
-    role: 'Solution Consultant III',
-    company: 'Sophos Solutions LATAM',
-    period: 'Feb 2023 — Jan 2025',
-  },
-  {
-    role: 'Associate Consultant',
-    company: 'Sophos Solutions LATAM',
-    period: 'Sep 2021 — Jan 2023',
-  },
-];
+import { WorkTimeline } from '@/components/profile/WorkTimeline';
+import { toWorkEntries } from '@/lib/actions/authors';
 
 export default async function PublicProfilePage({
   params,
@@ -48,6 +33,8 @@ export default async function PublicProfilePage({
     month: 'long',
     year: 'numeric',
   });
+
+  const workHistory = toWorkEntries(author.workHistory);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
@@ -159,10 +146,10 @@ export default async function PublicProfilePage({
       )}
 
       {/* Work history */}
-      {WORK_HISTORY.length > 0 && (
+      {workHistory.length > 0 && (
         <Reveal delay={0.18} className="mt-6">
           <h2 className="text-foreground mb-3 text-sm font-semibold">Work</h2>
-          <WorkTimeline items={WORK_HISTORY} />
+          <WorkTimeline items={workHistory} />
         </Reveal>
       )}
 
