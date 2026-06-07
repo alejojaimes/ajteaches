@@ -1,52 +1,40 @@
 'use client';
 
 import { useState } from 'react';
+import { toggleSave } from '@/lib/actions/saves';
 
 type Props = {
-  slug: string;
+  postId: string;
+  initialSaved: boolean;
 };
 
-function isBookmarked(slug: string): boolean {
-  if (typeof window === 'undefined') return false;
-  try {
-    const stored = localStorage.getItem('bookmarks');
-    if (!stored) return false;
-    const bookmarks: string[] = JSON.parse(stored);
-    return bookmarks.includes(slug);
-  } catch {
-    return false;
-  }
-}
+export function BookmarkButton({ postId, initialSaved }: Props) {
+  const [saved, setSaved] = useState(initialSaved);
 
-export function BookmarkButton({ slug }: Props) {
-  const [bookmarked, setBookmarked] = useState(() => isBookmarked(slug));
-
-  function toggle(e: React.MouseEvent) {
+  function handleClick(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
 
-    try {
-      const stored = localStorage.getItem('bookmarks');
-      const bookmarks: string[] = stored ? JSON.parse(stored) : [];
+    const nextSaved = !saved;
+    setSaved(nextSaved);
 
-      const updated = bookmarks.includes(slug)
-        ? bookmarks.filter((s) => s !== slug)
-        : [...bookmarks, slug];
-
-      localStorage.setItem('bookmarks', JSON.stringify(updated));
-      setBookmarked(updated.includes(slug));
-    } catch {
-      // localStorage unavailable; silently ignore
-    }
+    toggleSave(postId)
+      .then((result) => {
+        setSaved(result.saved);
+      })
+      .catch(() => {
+        // toggleSave redirects unauthenticated readers to /sign-in; ignore the
+        // navigation error here and let the redirect take over.
+      });
   }
 
   return (
     <button
-      onClick={toggle}
-      aria-label={bookmarked ? 'Remove bookmark' : 'Save bookmark'}
+      onClick={handleClick}
+      aria-label={saved ? 'Remove from saved posts' : 'Save this post'}
       className="text-muted-foreground hover:text-primary transition-colors"
     >
-      {bookmarked ? (
+      {saved ? (
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
