@@ -1,11 +1,18 @@
 import { getPublishedPosts } from '@/lib/db/posts';
+import { getSavedPostIds } from '@/lib/db/saves';
+import { getCurrentReader } from '@/lib/auth/get-current-reader';
 import { PostCard } from '@/components/blog/PostCard';
 import { NewsletterSection } from '@/components/blog/NewsletterSection';
 
-export const revalidate = 3600;
-
 export default async function Home() {
   const posts = await getPublishedPosts({ limit: 10 });
+  const reader = await getCurrentReader();
+  const savedPostIds = reader
+    ? await getSavedPostIds(
+        reader.id,
+        posts.map((post) => post.id)
+      )
+    : new Set<string>();
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12">
@@ -17,7 +24,9 @@ export default async function Home() {
         {posts.length === 0 ? (
           <p className="text-muted-foreground col-span-3 text-center">No posts yet.</p>
         ) : (
-          posts.map((post) => <PostCard key={post.id} post={post} />)
+          posts.map((post) => (
+            <PostCard key={post.id} post={post} initialSaved={savedPostIds.has(post.id)} />
+          ))
         )}
       </section>
       <div className="mt-16">

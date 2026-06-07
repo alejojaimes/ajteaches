@@ -3,6 +3,7 @@ import { BookmarkButton } from './BookmarkButton';
 
 type Props = {
   post: {
+    id: string;
     slug: string;
     title: string;
     excerpt: string | null;
@@ -14,9 +15,10 @@ type Props = {
     publishedAt: Date | null;
     tags?: { id: string; name: string }[];
   };
+  initialSaved?: boolean;
 };
 
-export function PostCard({ post }: Props) {
+export function PostCard({ post, initialSaved = false }: Props) {
   const readTime = post.readTimeOverride ?? post.readTimeMinutes;
 
   return (
@@ -40,7 +42,7 @@ export function PostCard({ post }: Props) {
               </span>
             )}
           </div>
-          <BookmarkButton slug={post.slug} />
+          <BookmarkButton postId={post.id} initialSaved={initialSaved} />
         </div>
 
         {/* Content row: text + optional thumbnail */}

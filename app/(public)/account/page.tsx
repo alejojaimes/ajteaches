@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentReader } from '@/lib/auth/get-current-reader';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -19,6 +20,13 @@ export default async function AccountPage() {
           {reader.email && <p className="text-muted-foreground text-sm">{reader.email}</p>}
         </div>
       </div>
+
+      <Link
+        href="/account/saved"
+        className="text-primary hover:text-primary-hover mb-8 inline-block text-sm font-medium"
+      >
+        View saved posts →
+      </Link>
 
       <ReaderProfileForm reader={reader} />
     </div>
