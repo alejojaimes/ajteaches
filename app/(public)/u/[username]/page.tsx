@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db/client';
 import { ShareProfileButton } from '@/components/profile/ShareProfileButton';
+import { Reveal } from '@/components/profile/Reveal';
 
 export default async function PublicProfilePage({
   params,
@@ -20,16 +21,29 @@ export default async function PublicProfilePage({
     <div className="mx-auto max-w-3xl px-4 py-8">
       {/* Banner + avatar */}
       <div className="relative">
-        <div className="rounded-card bg-primary h-36" />
+        <div className="profile-banner rounded-card relative h-36 overflow-hidden">
+          <svg
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full text-white/15"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <defs>
+              <pattern id="profile-grid" width="28" height="28" patternUnits="userSpaceOnUse">
+                <path d="M28 0H0V28" fill="none" stroke="currentColor" strokeWidth="1" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#profile-grid)" />
+          </svg>
+        </div>
         <div className="absolute -bottom-12 left-8">
           {author.avatar ? (
             <img
               src={author.avatar}
               alt={author.name}
-              className="h-24 w-24 rounded-full border-4 border-white object-cover shadow-md"
+              className="h-24 w-24 rounded-full border-4 border-white object-cover shadow-md transition-transform duration-300 hover:scale-105"
             />
           ) : (
-            <div className="bg-primary flex h-24 w-24 items-center justify-center rounded-full border-4 border-white shadow-md">
+            <div className="bg-primary flex h-24 w-24 items-center justify-center rounded-full border-4 border-white shadow-md transition-transform duration-300 hover:scale-105">
               <span className="text-2xl font-bold text-white">
                 {author.name
                   .split(' ')
@@ -44,7 +58,7 @@ export default async function PublicProfilePage({
       </div>
 
       {/* Identity */}
-      <div className="mt-16 flex items-start justify-between gap-4">
+      <Reveal className="mt-16 flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-foreground text-2xl font-bold">{author.name}</h1>
@@ -64,48 +78,51 @@ export default async function PublicProfilePage({
           )}
         </div>
         <ShareProfileButton />
-      </div>
+      </Reveal>
 
       {/* Bio */}
       {author.bio && (
-        <div className="border-primary bg-primary-soft/40 rounded-card mt-5 border-l-2 px-4 py-3">
+        <Reveal
+          delay={0.05}
+          className="border-primary bg-primary-soft/40 rounded-card mt-5 border-l-2 px-4 py-3"
+        >
           <p className="text-foreground text-sm leading-relaxed">{author.bio}</p>
-        </div>
+        </Reveal>
       )}
 
       {/* Roles */}
       {author.roles.length > 0 && (
-        <div className="mt-5 flex flex-wrap gap-2">
+        <Reveal delay={0.1} className="mt-5 flex flex-wrap gap-2">
           {author.roles.map((role) => (
             <span
               key={role}
-              className="rounded-badge bg-primary-soft text-primary px-2.5 py-1 text-xs font-medium"
+              className="rounded-badge bg-primary-soft text-primary px-2.5 py-1 text-xs font-medium transition-transform duration-200 hover:-translate-y-0.5"
             >
               {role}
             </span>
           ))}
-        </div>
+        </Reveal>
       )}
 
       {/* Interests */}
       {author.interests.length > 0 && (
-        <div className="mt-6">
+        <Reveal delay={0.15} className="mt-6">
           <h2 className="text-foreground mb-2 text-sm font-semibold">My Interests</h2>
           <div className="flex flex-wrap gap-2">
             {author.interests.map((interest) => (
               <span
                 key={interest}
-                className="rounded-badge bg-accent/10 text-accent px-2.5 py-1 text-xs font-medium"
+                className="rounded-badge bg-accent/10 text-accent px-2.5 py-1 text-xs font-medium transition-transform duration-200 hover:-translate-y-0.5"
               >
                 {interest}
               </span>
             ))}
           </div>
-        </div>
+        </Reveal>
       )}
 
       {/* Info links */}
-      <div className="border-border bg-card rounded-card mt-6 border p-5">
+      <Reveal delay={0.2} className="border-border bg-card rounded-card mt-6 border p-5">
         <h2 className="text-foreground mb-3 text-sm font-semibold">Information</h2>
         <div className="space-y-3">
           {author.website && (
@@ -222,7 +239,7 @@ export default async function PublicProfilePage({
             </a>
           )}
         </div>
-      </div>
+      </Reveal>
     </div>
   );
 }
