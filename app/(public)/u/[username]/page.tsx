@@ -3,6 +3,23 @@ import Link from 'next/link';
 import { prisma } from '@/lib/db/client';
 import { ShareProfileButton } from '@/components/profile/ShareProfileButton';
 import { Reveal } from '@/components/profile/Reveal';
+import { WorkTimeline, type WorkEntry } from '@/components/profile/WorkTimeline';
+
+const WORK_HISTORY: WorkEntry[] = [
+  { role: 'AI Engineer', company: 'GFT Technologies', period: 'Feb 2026 — Present' },
+  { role: 'Senior Data Engineer', company: 'GFT Technologies', period: 'Apr 2025 — Jan 2026' },
+  { role: 'Tech Lead', company: 'GFT Technologies', period: 'Oct 2024 — Mar 2025' },
+  {
+    role: 'Solution Consultant III',
+    company: 'Sophos Solutions LATAM',
+    period: 'Feb 2023 — Jan 2025',
+  },
+  {
+    role: 'Associate Consultant',
+    company: 'Sophos Solutions LATAM',
+    period: 'Sep 2021 — Jan 2023',
+  },
+];
 
 export default async function PublicProfilePage({
   params,
@@ -36,7 +53,7 @@ export default async function PublicProfilePage({
     <div className="mx-auto max-w-3xl px-4 py-8">
       {/* Banner + avatar */}
       <div className="relative">
-        <div className="profile-banner rounded-card relative h-36 overflow-hidden">
+        <div className="profile-banner rounded-card relative h-40 overflow-hidden">
           <svg
             aria-hidden="true"
             className="absolute inset-0 h-full w-full text-white/15"
@@ -50,16 +67,16 @@ export default async function PublicProfilePage({
             <rect width="100%" height="100%" fill="url(#profile-grid)" />
           </svg>
         </div>
-        <div className="absolute -bottom-12 left-8">
+        <div className="absolute -bottom-14 left-1/2 -translate-x-1/2">
           {author.avatar ? (
             <img
               src={author.avatar}
               alt={author.name}
-              className="h-24 w-24 rounded-full border-4 border-white object-cover shadow-md transition-transform duration-300 hover:scale-105"
+              className="h-28 w-28 rounded-full border-4 border-white object-cover shadow-md transition-transform duration-300 hover:scale-105"
             />
           ) : (
-            <div className="bg-primary flex h-24 w-24 items-center justify-center rounded-full border-4 border-white shadow-md transition-transform duration-300 hover:scale-105">
-              <span className="text-2xl font-bold text-white">
+            <div className="bg-primary flex h-28 w-28 items-center justify-center rounded-full border-4 border-white shadow-md transition-transform duration-300 hover:scale-105">
+              <span className="text-3xl font-bold text-white">
                 {author.name
                   .split(' ')
                   .map((w) => w[0])
@@ -73,26 +90,29 @@ export default async function PublicProfilePage({
       </div>
 
       {/* Identity */}
-      <Reveal className="mt-16 flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-foreground text-2xl font-bold">{author.name}</h1>
-            {author.isOwner && (
-              <span className="rounded-badge bg-primary-soft text-primary px-2 py-0.5 text-[11px] font-semibold tracking-wide uppercase">
-                Creator
-              </span>
-            )}
-          </div>
-          {author.username && <p className="text-muted-foreground text-sm">@{author.username}</p>}
-          {(author.location || joinedDate) && (
-            <p className="text-muted-foreground mt-1 text-sm">
-              {author.location && <span>{author.location}</span>}
-              {author.location && <span className="mx-2">·</span>}
-              <span>Joined {joinedDate}</span>
-            </p>
+      <Reveal className="mt-20 flex flex-col items-center text-center">
+        <div className="flex items-center gap-2">
+          <h1 className="text-foreground text-2xl font-bold">{author.name}</h1>
+          {author.isOwner && (
+            <span className="rounded-badge bg-primary-soft text-primary px-2 py-0.5 text-[11px] font-semibold tracking-wide uppercase">
+              Creator
+            </span>
           )}
         </div>
-        <ShareProfileButton />
+        {author.username && <p className="text-muted-foreground text-sm">@{author.username}</p>}
+        {author.headline && (
+          <p className="text-primary mt-2 text-sm font-medium">{author.headline}</p>
+        )}
+        {(author.location || joinedDate) && (
+          <p className="text-muted-foreground mt-1 text-sm">
+            {author.location && <span>{author.location}</span>}
+            {author.location && <span className="mx-2">·</span>}
+            <span>Joined {joinedDate}</span>
+          </p>
+        )}
+        <div className="mt-4">
+          <ShareProfileButton />
+        </div>
       </Reveal>
 
       {/* Bio */}
@@ -135,6 +155,14 @@ export default async function PublicProfilePage({
               </span>
             ))}
           </div>
+        </Reveal>
+      )}
+
+      {/* Work history */}
+      {WORK_HISTORY.length > 0 && (
+        <Reveal delay={0.18} className="mt-6">
+          <h2 className="text-foreground mb-3 text-sm font-semibold">Work</h2>
+          <WorkTimeline items={WORK_HISTORY} />
         </Reveal>
       )}
 
