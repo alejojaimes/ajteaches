@@ -10,6 +10,7 @@ type Author = {
   username: string | null;
   avatar: string | null;
   bio: string | null;
+  headline: string | null;
   email: string | null;
   website: string | null;
   githubUrl: string | null;
@@ -119,6 +120,7 @@ export function ProfileEditor({ author, featuredPost }: Props) {
 
   const [name, setName] = useState(author.name);
   const [bio, setBio] = useState(author.bio ?? '');
+  const [headline, setHeadline] = useState(author.headline ?? '');
   const [email, setEmail] = useState(author.email ?? '');
   const [location, setLocation] = useState(author.location ?? '');
   const [website, setWebsite] = useState(author.website ?? '');
@@ -177,6 +179,7 @@ export function ProfileEditor({ author, featuredPost }: Props) {
       await updateAuthor({
         name,
         bio,
+        headline,
         email,
         location,
         website,
@@ -252,6 +255,21 @@ export function ProfileEditor({ author, featuredPost }: Props) {
             required
             className={inputClass}
           />
+        </div>
+
+        {/* Headline */}
+        <div>
+          <label className={labelClass}>Headline</label>
+          <input
+            type="text"
+            value={headline}
+            onChange={(e) => setHeadline(e.target.value)}
+            placeholder="e.g. MSc in Data Science & Systems Engineering"
+            className={inputClass}
+          />
+          <p className="text-muted-foreground mt-1 text-xs">
+            A short professional title shown under your name on your About page.
+          </p>
         </div>
 
         {/* Bio */}

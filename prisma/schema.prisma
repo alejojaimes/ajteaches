@@ -13,6 +13,7 @@ model Author {
   username         String?  @unique
   avatar           String?
   bio              String?
+  headline         String?
   email            String?
   website          String?
   linkedinUrl      String?
