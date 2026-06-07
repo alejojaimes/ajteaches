@@ -1,22 +1,42 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentAuthor } from '@/lib/auth/get-current-author';
-import { prisma } from '@/lib/db/client';
 import { createPost, deletePost } from '@/lib/actions/posts';
-import { DeletePostButton } from '@/components/editor/DeletePostButton';
+import { getOwnerPosts, OWNER_POSTS_PAGE_SIZE, type OwnerPostsFilter } from '@/lib/db/posts';
+import { FeedPostCard } from '@/components/feed/FeedPostCard';
 
-export default async function FeedPage() {
+const TABS: { key: OwnerPostsFilter; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'draft', label: 'Drafts' },
+  { key: 'published', label: 'Published' },
+];
+
+function parseFilter(value: string | undefined): OwnerPostsFilter {
+  return value === 'draft' || value === 'published' ? value : 'all';
+}
+
+function parsePage(value: string | undefined): number {
+  const page = Number(value);
+  return Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
+}
+
+type Props = {
+  searchParams: Promise<{ filter?: string; page?: string }>;
+};
+
+export default async function FeedPage({ searchParams }: Props) {
   const author = await getCurrentAuthor();
   if (!author) redirect('/sign-in');
 
-  const posts = await prisma.post.findMany({
-    where: { authorId: author.id, deletedAt: null },
-    orderBy: { updatedAt: 'desc' },
-  });
+  const params = await searchParams;
+  const filter = parseFilter(params.filter);
+  const page = parsePage(params.page);
+
+  const { posts, hasMore } = await getOwnerPosts(author.id, filter, page);
 
   return (
     <div>
-      <header className="mb-8 flex items-center justify-between">
+      <header className="mb-6 flex items-center justify-between">
         <h1 className="text-foreground text-3xl font-bold">Your Posts</h1>
         <form action={createPost}>
           <button
@@ -27,9 +47,30 @@ export default async function FeedPage() {
           </button>
         </form>
       </header>
+
+      <div className="border-border mb-6 flex items-center gap-1 border-b">
+        {TABS.map((tab) => (
+          <Link
+            key={tab.key}
+            href={tab.key === 'all' ? '/feed' : `/feed?filter=${tab.key}`}
+            className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
+              filter === tab.key
+                ? 'border-primary text-primary'
+                : 'text-muted-foreground hover:text-foreground border-transparent'
+            }`}
+          >
+            {tab.label}
+          </Link>
+        ))}
+      </div>
+
       <div className="space-y-4">
         {posts.length === 0 ? (
-          <p className="text-muted-foreground">Start writing your first post.</p>
+          <p className="text-muted-foreground">
+            {filter === 'all'
+              ? 'Start writing your first post.'
+              : `No ${filter === 'draft' ? 'drafts' : 'published posts'} yet.`}
+          </p>
         ) : (
           posts.map((post) => {
             async function del() {
@@ -37,55 +78,33 @@ export default async function FeedPage() {
               await deletePost(post.id);
             }
             return (
-              <article
+              <FeedPostCard
                 key={post.id}
-                className="rounded-card border-border bg-card cursor-default border p-4 transition-shadow duration-150 hover:shadow-md"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-foreground font-medium">{post.title}</h3>
-                    {post.excerpt && (
-                      <p className="text-muted-foreground mt-1 text-sm">{post.excerpt}</p>
-                    )}
-                    <div className="text-muted-foreground mt-2 flex gap-2 text-xs">
-                      <span className="rounded-badge bg-primary-soft text-primary px-2 py-0.5 font-medium">
-                        {post.status}
-                      </span>
-                      <span>·</span>
-                      <span>{post.readTimeMinutes} min read</span>
-                    </div>
-                  </div>
-                  <div className="ml-4 flex shrink-0 items-center gap-2">
-                    <Link
-                      href={`/write/${post.id}`}
-                      className="rounded-button border-border text-muted-foreground hover:border-primary hover:text-primary inline-flex items-center gap-1.5 border px-3 py-1.5 text-xs font-medium transition-all duration-150 hover:scale-[1.03]"
-                    >
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 14 14"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                        aria-hidden="true"
-                      >
-                        <path
-                          d="M9.5 1.5L12.5 4.5L4.5 12.5H1.5V9.5L9.5 1.5Z"
-                          stroke="currentColor"
-                          strokeWidth="1.2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                      Edit
-                    </Link>
-                    <DeletePostButton deleteAction={del} postTitle={post.title} />
-                  </div>
-                </div>
-              </article>
+                post={post}
+                author={{ name: author.name, avatar: author.avatar }}
+                onDelete={del}
+              />
             );
           })
         )}
       </div>
+
+      {hasMore && (
+        <div className="mt-8 flex justify-center">
+          <Link
+            href={`/feed?${filter !== 'all' ? `filter=${filter}&` : ''}page=${page + 1}`}
+            className="rounded-button border-border text-foreground hover:border-primary hover:text-primary border px-5 py-2 text-sm font-medium transition-colors"
+          >
+            Load older posts
+          </Link>
+        </div>
+      )}
+
+      {posts.length > 0 && !hasMore && posts.length > OWNER_POSTS_PAGE_SIZE && (
+        <p className="text-muted-foreground mt-8 text-center text-xs">
+          You&apos;ve reached the end — {posts.length} posts total.
+        </p>
+      )}
     </div>
   );
 }
