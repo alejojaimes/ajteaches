@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getPostBySlug, getPublishedPosts } from '@/lib/db/posts';
 import { renderPostHTML } from '@/lib/render-post';
 import { CodeCopyInit } from '@/components/blog/CodeCopyInit';
@@ -37,7 +38,15 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
       </div>
 
       <h1 className="text-foreground mb-4 text-4xl leading-tight font-bold">{post.title}</h1>
-      <div className="text-muted-foreground mb-8 text-sm">{post.author.name}</div>
+      <div className="mb-8 flex items-center gap-2.5">
+        <Avatar size="sm">
+          {post.author.avatar && <AvatarImage src={post.author.avatar} alt={post.author.name} />}
+          <AvatarFallback className="bg-primary text-[10px] font-bold text-white">
+            aj
+          </AvatarFallback>
+        </Avatar>
+        <span className="text-muted-foreground text-sm">{post.author.name}</span>
+      </div>
 
       {post.coverImage && (
         <div className="mb-8 overflow-hidden rounded-xl">
