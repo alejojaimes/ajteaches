@@ -21,6 +21,7 @@ model Author {
   location         String?
   roles            String[] @default([])
   interests        String[] @default([])
+  workHistory      Json     @default("[]")
   featuredPostSlug String?
   isOwner          Boolean  @default(false)
   createdAt        DateTime @default(now())
