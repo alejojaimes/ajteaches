@@ -1,0 +1,1 @@
+ALTER TABLE "Author" ADD COLUMN "roles" TEXT[] NOT NULL DEFAULT '{}';
