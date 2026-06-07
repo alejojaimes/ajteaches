@@ -29,12 +29,8 @@ export default async function PublicProfilePage({
       })
     : null;
 
-  const joinedDate = author.createdAt.toLocaleDateString('en-US', {
-    month: 'long',
-    year: 'numeric',
-  });
-
   const workHistory = toWorkEntries(author.workHistory);
+  const currentRole = workHistory[0]?.role;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
@@ -109,11 +105,11 @@ export default async function PublicProfilePage({
         {author.headline && (
           <p className="text-primary mt-2 text-sm font-medium">{author.headline}</p>
         )}
-        {(author.location || joinedDate) && (
+        {(author.location || currentRole) && (
           <p className="text-muted-foreground mt-1 text-sm">
             {author.location && <span>{author.location}</span>}
-            {author.location && <span className="mx-2">·</span>}
-            <span>Joined {joinedDate}</span>
+            {author.location && currentRole && <span className="mx-2">·</span>}
+            {currentRole && <span className="text-foreground font-semibold">{currentRole}</span>}
           </p>
         )}
         <div className="mt-4">
