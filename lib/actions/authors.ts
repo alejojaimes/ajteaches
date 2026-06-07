@@ -12,6 +12,7 @@ export async function updateAuthor(payload: {
   linkedinUrl: string;
   location: string;
   roles: string[];
+  interests: string[];
   avatar?: string;
 }): Promise<{ ok: true }> {
   const author = await getCurrentAuthor();
@@ -27,6 +28,7 @@ export async function updateAuthor(payload: {
       linkedinUrl: payload.linkedinUrl.trim() || null,
       location: payload.location.trim() || null,
       roles: payload.roles,
+      interests: payload.interests,
       ...(payload.avatar ? { avatar: payload.avatar } : {}),
     },
   });

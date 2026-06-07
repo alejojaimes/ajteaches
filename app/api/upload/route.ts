@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   const formData = await req.formData();
   const file = formData.get('file') as File | null;
   if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 });
-  const postId = (formData.get('postId') as string | null)?.trim() || 'misc';
+  const scope = (formData.get('scope') as string | null)?.trim();
 
   const maxBytes = 10 * 1024 * 1024;
   if (file.size > maxBytes) {
@@ -33,10 +33,18 @@ export async function POST(req: NextRequest) {
   const buffer = Buffer.from(await file.arrayBuffer());
   const dataUri = `data:${file.type};base64,${buffer.toString('base64')}`;
 
-  const result = await cloudinary.uploader.upload(dataUri, {
-    folder: `ajteaches/posts/${postId}`,
-    transformation: [{ width: 1200, crop: 'limit' }, { quality: 'auto' }, { fetch_format: 'auto' }],
-  });
+  const isAvatar = scope === 'avatar';
+  const postId = (formData.get('postId') as string | null)?.trim() || 'misc';
+  const folder = isAvatar ? `ajteaches/avatars/${userId}` : `ajteaches/posts/${postId}`;
+  const transformation = isAvatar
+    ? [
+        { width: 400, height: 400, crop: 'fill', gravity: 'face' },
+        { quality: 'auto' },
+        { fetch_format: 'auto' },
+      ]
+    : [{ width: 1200, crop: 'limit' }, { quality: 'auto' }, { fetch_format: 'auto' }];
+
+  const result = await cloudinary.uploader.upload(dataUri, { folder, transformation });
 
   return NextResponse.json({ url: result.secure_url });
 }
