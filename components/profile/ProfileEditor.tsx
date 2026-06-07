@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { updateAuthor } from '@/lib/actions/authors';
 
 type Author = {
@@ -15,13 +15,98 @@ type Author = {
   linkedinUrl: string | null;
   location: string | null;
   roles: string[];
+  interests: string[];
 };
 
 type Props = {
   author: Author;
 };
 
+const inputClass =
+  'border-border bg-background text-foreground w-full rounded-button border px-3 py-2 text-sm focus:border-primary focus:outline-none';
+const labelClass = 'text-foreground mb-1 block text-sm font-medium';
+
+function ChipField({
+  label,
+  values,
+  onChange,
+  placeholder,
+  chipClassName,
+}: {
+  label: string;
+  values: string[];
+  onChange: (next: string[]) => void;
+  placeholder: string;
+  chipClassName: string;
+}) {
+  const [input, setInput] = useState('');
+
+  const add = (raw: string) => {
+    const value = raw.trim().replace(/,/g, '');
+    if (!value || values.some((v) => v.toLowerCase() === value.toLowerCase())) return;
+    onChange([...values, value]);
+  };
+
+  const remove = (value: string) => {
+    onChange(values.filter((v) => v !== value));
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      add(input);
+      setInput('');
+    } else if (e.key === 'Backspace' && input === '' && values.length > 0) {
+      const last = values[values.length - 1];
+      if (last) remove(last);
+    }
+  };
+
+  return (
+    <div>
+      <label className={labelClass}>{label}</label>
+      <div className="border-border bg-background rounded-button flex min-h-[40px] flex-wrap items-center gap-1.5 border px-2 py-1.5">
+        {values.map((value) => (
+          <span
+            key={value}
+            className={`rounded-badge flex items-center gap-1 px-2 py-0.5 text-xs ${chipClassName}`}
+          >
+            {value}
+            <button
+              type="button"
+              onClick={() => remove(value)}
+              className="leading-none hover:opacity-70"
+              aria-label={`Remove ${value}`}
+            >
+              ×
+            </button>
+          </span>
+        ))}
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={() => {
+            if (input.trim()) {
+              add(input);
+              setInput('');
+            }
+          }}
+          placeholder={values.length === 0 ? placeholder : ''}
+          className="text-foreground placeholder:text-muted-foreground min-w-[160px] flex-1 bg-transparent text-sm outline-none"
+        />
+      </div>
+    </div>
+  );
+}
+
 export function ProfileEditor({ author }: Props) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [avatar, setAvatar] = useState(author.avatar);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
   const [name, setName] = useState(author.name);
   const [bio, setBio] = useState(author.bio ?? '');
   const [location, setLocation] = useState(author.location ?? '');
@@ -29,28 +114,32 @@ export function ProfileEditor({ author }: Props) {
   const [githubUrl, setGithubUrl] = useState(author.githubUrl ?? '');
   const [linkedinUrl, setLinkedinUrl] = useState(author.linkedinUrl ?? '');
   const [roles, setRoles] = useState<string[]>(author.roles);
-  const [roleInput, setRoleInput] = useState('');
+  const [interests, setInterests] = useState<string[]>(author.interests);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const addRole = (raw: string) => {
-    const role = raw.trim().replace(/,/g, '');
-    if (!role || roles.some((r) => r.toLowerCase() === role.toLowerCase())) return;
-    setRoles((prev) => [...prev, role]);
-  };
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
 
-  const removeRole = (role: string) => {
-    setRoles((prev) => prev.filter((r) => r !== role));
-  };
-
-  const handleRoleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault();
-      addRole(roleInput);
-      setRoleInput('');
-    } else if (e.key === 'Backspace' && roleInput === '' && roles.length > 0) {
-      const last = roles[roles.length - 1];
-      if (last) removeRole(last);
+    setUploadError(null);
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('scope', 'avatar');
+      const res = await fetch('/api/upload', { method: 'POST', body: form });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? 'Upload failed');
+      }
+      const { url } = (await res.json()) as { url: string };
+      setAvatar(url);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -67,6 +156,8 @@ export function ProfileEditor({ author }: Props) {
         githubUrl,
         linkedinUrl,
         roles,
+        interests,
+        ...(avatar && avatar !== author.avatar ? { avatar } : {}),
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -75,13 +166,54 @@ export function ProfileEditor({ author }: Props) {
     }
   };
 
-  const inputClass =
-    'border-border bg-background text-foreground w-full rounded-button border px-3 py-2 text-sm focus:border-primary focus:outline-none';
-  const labelClass = 'text-foreground mb-1 block text-sm font-medium';
-
   return (
     <form onSubmit={(e) => void handleSubmit(e)}>
       <div className="space-y-5">
+        {/* Avatar */}
+        <div>
+          <label className={labelClass}>Avatar</label>
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-full disabled:opacity-60"
+              aria-label="Change avatar"
+            >
+              {avatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatar} alt={name} className="h-full w-full object-cover" />
+              ) : (
+                <div className="bg-primary flex h-full w-full items-center justify-center">
+                  <span className="text-lg font-bold text-white">aj</span>
+                </div>
+              )}
+              <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-[10px] font-medium text-white opacity-0 transition-all group-hover:bg-black/40 group-hover:opacity-100">
+                {uploading ? '...' : 'Change'}
+              </span>
+            </button>
+            <div className="text-muted-foreground text-xs">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="text-primary hover:text-primary-hover font-medium disabled:opacity-60"
+              >
+                {uploading ? 'Uploading…' : 'Upload new photo'}
+              </button>
+              <p className="mt-0.5">JPG or PNG, square images work best.</p>
+              {uploadError && <p className="text-destructive mt-0.5">{uploadError}</p>}
+            </div>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={(e) => void handleAvatarChange(e)}
+            className="hidden"
+          />
+        </div>
+
         {/* Name */}
         <div>
           <label className={labelClass}>Name</label>
@@ -153,41 +285,22 @@ export function ProfileEditor({ author }: Props) {
         </div>
 
         {/* Roles */}
-        <div>
-          <label className={labelClass}>Roles</label>
-          <div className="border-border bg-background rounded-button flex min-h-[40px] flex-wrap items-center gap-1.5 border px-2 py-1.5">
-            {roles.map((role) => (
-              <span
-                key={role}
-                className="bg-primary-soft text-primary rounded-badge flex items-center gap-1 px-2 py-0.5 text-xs"
-              >
-                {role}
-                <button
-                  type="button"
-                  onClick={() => removeRole(role)}
-                  className="hover:text-primary/70 leading-none"
-                  aria-label={`Remove role ${role}`}
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-            <input
-              type="text"
-              value={roleInput}
-              onChange={(e) => setRoleInput(e.target.value)}
-              onKeyDown={handleRoleKeyDown}
-              onBlur={() => {
-                if (roleInput.trim()) {
-                  addRole(roleInput);
-                  setRoleInput('');
-                }
-              }}
-              placeholder={roles.length === 0 ? 'Add roles (press Enter or comma)…' : ''}
-              className="text-foreground placeholder:text-muted-foreground min-w-[160px] flex-1 bg-transparent text-sm outline-none"
-            />
-          </div>
-        </div>
+        <ChipField
+          label="Roles"
+          values={roles}
+          onChange={setRoles}
+          placeholder="Add roles (press Enter or comma)…"
+          chipClassName="bg-primary-soft text-primary"
+        />
+
+        {/* Interests */}
+        <ChipField
+          label="Interests"
+          values={interests}
+          onChange={setInterests}
+          placeholder="Add interests (press Enter or comma)…"
+          chipClassName="bg-accent/10 text-accent"
+        />
       </div>
 
       <div className="mt-7">

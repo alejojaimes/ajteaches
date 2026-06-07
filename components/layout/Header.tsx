@@ -1,6 +1,12 @@
 import Link from 'next/link';
+import { prisma } from '@/lib/db/client';
 
-export function Header() {
+export async function Header() {
+  const owner = await prisma.author.findFirst({
+    where: { isOwner: true },
+    select: { username: true },
+  });
+
   return (
     <header className="border-border bg-card border-b">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
@@ -20,6 +26,14 @@ export function Header() {
           >
             Tutorials
           </Link>
+          {owner?.username && (
+            <Link
+              href={`/u/${owner.username}`}
+              className="text-muted-foreground hover:text-foreground text-sm"
+            >
+              About
+            </Link>
+          )}
         </nav>
       </div>
     </header>

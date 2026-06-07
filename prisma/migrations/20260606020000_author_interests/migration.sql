@@ -1,0 +1,1 @@
+ALTER TABLE "Author" ADD COLUMN "interests" TEXT[] NOT NULL DEFAULT '{}';
