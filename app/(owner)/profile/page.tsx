@@ -27,9 +27,7 @@ export default async function ProfilePage() {
         </div>
       </div>
 
-      <ProfileEditor
-        author={{ ...author, roles: (author as unknown as { roles?: string[] }).roles ?? [] }}
-      />
+      <ProfileEditor author={author} />
     </div>
   );
 }

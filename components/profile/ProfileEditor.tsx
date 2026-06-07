@@ -60,13 +60,12 @@ export function ProfileEditor({ author }: Props) {
     setSaving(true);
     try {
       await updateAuthor({
-        id: author.id,
         name,
-        bio: bio || null,
-        location: location || null,
-        website: website || null,
-        githubUrl: githubUrl || null,
-        linkedinUrl: linkedinUrl || null,
+        bio,
+        location,
+        website,
+        githubUrl,
+        linkedinUrl,
         roles,
       });
       setSaved(true);
