@@ -61,6 +61,8 @@ model Post {
   shareLinks       DraftShareLink[]
   events           PostEvent[]
   tags             Tag[]
+  likes            PostLike[]
+  comments         Comment[]
 
   @@index([slug])
   @@index([status, publishedAt])
@@ -106,17 +108,47 @@ model Tag {
 }
 
 model Reader {
-  id          String   @id @default(cuid())
-  clerkUserId String   @unique
+  id          String     @id @default(cuid())
+  clerkUserId String     @unique
   name        String
   email       String?
   githubUrl   String?
   phone       String?
   avatar      String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  likes       PostLike[]
+  comments    Comment[]
 
   @@index([clerkUserId])
+}
+
+model PostLike {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  readerId  String
+  reader    Reader   @relation(fields: [readerId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, readerId])
+  @@index([postId])
+  @@index([readerId])
+}
+
+model Comment {
+  id        String    @id @default(cuid())
+  postId    String
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  readerId  String
+  reader    Reader    @relation(fields: [readerId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([postId, createdAt])
+  @@index([readerId])
 }
 
 model Subscriber {
