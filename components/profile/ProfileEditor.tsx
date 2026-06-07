@@ -1,7 +1,8 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { updateAuthor, toWorkEntries, type WorkEntry } from '@/lib/actions/authors';
+import { updateAuthor } from '@/lib/actions/authors';
+import { toWorkEntries, type WorkEntry } from '@/lib/work-entries';
 import { FeaturedPostPicker, type FeaturedPostOption } from './FeaturedPostPicker';
 
 type Author = {

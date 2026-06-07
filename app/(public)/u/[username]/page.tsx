@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db/client';
 import { ShareProfileButton } from '@/components/profile/ShareProfileButton';
 import { Reveal } from '@/components/profile/Reveal';
 import { WorkTimeline } from '@/components/profile/WorkTimeline';
-import { toWorkEntries } from '@/lib/actions/authors';
+import { toWorkEntries } from '@/lib/work-entries';
 
 export default async function PublicProfilePage({
   params,

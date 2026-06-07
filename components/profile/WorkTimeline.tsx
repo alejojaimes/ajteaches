@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'motion/react';
-import type { WorkEntry } from '@/lib/actions/authors';
+import type { WorkEntry } from '@/lib/work-entries';
 
 export type { WorkEntry };
 

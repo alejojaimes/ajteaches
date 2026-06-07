@@ -3,16 +3,7 @@
 import { redirect } from 'next/navigation';
 import { getCurrentAuthor } from '@/lib/auth/get-current-author';
 import { prisma } from '@/lib/db/client';
-
-export type WorkEntry = {
-  role: string;
-  company: string;
-  period: string;
-};
-
-export function toWorkEntries(value: unknown): WorkEntry[] {
-  return Array.isArray(value) ? (value as WorkEntry[]) : [];
-}
+import type { WorkEntry } from '@/lib/work-entries';
 
 export async function updateAuthor(payload: {
   name: string;
