@@ -7,6 +7,7 @@ import { prisma } from '@/lib/db/client';
 export async function updateAuthor(payload: {
   name: string;
   bio: string;
+  email: string;
   website: string;
   githubUrl: string;
   linkedinUrl: string;
@@ -23,6 +24,7 @@ export async function updateAuthor(payload: {
     data: {
       name: payload.name.trim() || author.name,
       bio: payload.bio.trim() || null,
+      email: payload.email.trim() || null,
       website: payload.website.trim() || null,
       githubUrl: payload.githubUrl.trim() || null,
       linkedinUrl: payload.linkedinUrl.trim() || null,
