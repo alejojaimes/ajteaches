@@ -14,6 +14,7 @@ export async function updateAuthor(payload: {
   location: string;
   roles: string[];
   interests: string[];
+  featuredPostSlug: string | null;
   avatar?: string;
 }): Promise<{ ok: true }> {
   const author = await getCurrentAuthor();
@@ -31,6 +32,7 @@ export async function updateAuthor(payload: {
       location: payload.location.trim() || null,
       roles: payload.roles,
       interests: payload.interests,
+      featuredPostSlug: payload.featuredPostSlug,
       ...(payload.avatar ? { avatar: payload.avatar } : {}),
     },
   });
