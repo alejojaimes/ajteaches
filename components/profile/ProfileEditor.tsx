@@ -109,6 +109,7 @@ export function ProfileEditor({ author }: Props) {
 
   const [name, setName] = useState(author.name);
   const [bio, setBio] = useState(author.bio ?? '');
+  const [email, setEmail] = useState(author.email ?? '');
   const [location, setLocation] = useState(author.location ?? '');
   const [website, setWebsite] = useState(author.website ?? '');
   const [githubUrl, setGithubUrl] = useState(author.githubUrl ?? '');
@@ -151,6 +152,7 @@ export function ProfileEditor({ author }: Props) {
       await updateAuthor({
         name,
         bio,
+        email,
         location,
         website,
         githubUrl,
@@ -233,6 +235,18 @@ export function ProfileEditor({ author }: Props) {
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             rows={3}
+            className={inputClass}
+          />
+        </div>
+
+        {/* Email */}
+        <div>
+          <label className={labelClass}>Email</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="hello@ajteaches.dev"
             className={inputClass}
           />
         </div>
