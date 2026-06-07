@@ -53,6 +53,25 @@ export default async function PublicProfilePage({
             </defs>
             <rect width="100%" height="100%" fill="url(#profile-grid)" />
           </svg>
+          <span
+            aria-hidden="true"
+            className="profile-banner-orb -top-6 left-10 h-28 w-28"
+            style={{ animationDelay: '0s', animationDuration: '12s' }}
+          />
+          <span
+            aria-hidden="true"
+            className="profile-banner-orb -top-10 right-12 h-36 w-36"
+            style={{ animationDelay: '-4s', animationDuration: '14s' }}
+          />
+          <span
+            aria-hidden="true"
+            className="profile-banner-orb bottom-2 left-1/3 h-24 w-24"
+            style={{ animationDelay: '-7s', animationDuration: '9s' }}
+          />
+          <span
+            aria-hidden="true"
+            className="profile-avatar-glow absolute bottom-[-3.5rem] left-1/2 h-44 w-44 rounded-full"
+          />
         </div>
         <div className="absolute -bottom-14 left-1/2 -translate-x-1/2">
           {author.avatar ? (
