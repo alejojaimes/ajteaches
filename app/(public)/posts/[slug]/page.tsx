@@ -1,9 +1,14 @@
 import { notFound } from 'next/navigation';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getPostBySlug, getPublishedPosts } from '@/lib/db/posts';
+import { getPostComments } from '@/lib/db/comments';
+import { getLikeState } from '@/lib/actions/likes';
+import { getCurrentReader } from '@/lib/auth/get-current-reader';
 import { renderPostHTML } from '@/lib/render-post';
 import { CodeCopyInit } from '@/components/blog/CodeCopyInit';
 import { ReadingTracker } from '@/components/blog/ReadingTracker';
+import { LikeButton } from '@/components/blog/LikeButton';
+import { CommentSection } from '@/components/blog/CommentSection';
 
 export async function generateStaticParams() {
   const posts = await getPublishedPosts({ limit: 1000 });
@@ -17,6 +22,12 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
   if (!post || post.status !== 'published') notFound();
 
   const readTime = post.readTimeOverride ?? post.readTimeMinutes;
+
+  const [{ liked, count }, comments, reader] = await Promise.all([
+    getLikeState(post.id),
+    getPostComments(post.id),
+    getCurrentReader(),
+  ]);
 
   return (
     <article className="mx-auto max-w-[700px] px-4 py-12">
@@ -38,14 +49,17 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
       </div>
 
       <h1 className="text-foreground mb-4 text-4xl leading-tight font-bold">{post.title}</h1>
-      <div className="mb-8 flex items-center gap-2.5">
-        <Avatar size="sm">
-          {post.author.avatar && <AvatarImage src={post.author.avatar} alt={post.author.name} />}
-          <AvatarFallback className="bg-primary text-[10px] font-bold text-white">
-            aj
-          </AvatarFallback>
-        </Avatar>
-        <span className="text-muted-foreground text-sm">{post.author.name}</span>
+      <div className="mb-8 flex items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2.5">
+          <Avatar size="sm">
+            {post.author.avatar && <AvatarImage src={post.author.avatar} alt={post.author.name} />}
+            <AvatarFallback className="bg-primary text-[10px] font-bold text-white">
+              aj
+            </AvatarFallback>
+          </Avatar>
+          <span className="text-muted-foreground text-sm">{post.author.name}</span>
+        </div>
+        <LikeButton postId={post.id} initialLiked={liked} initialCount={count} />
       </div>
 
       {post.coverImage && (
@@ -71,6 +85,13 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
 
       <CodeCopyInit />
       <ReadingTracker postId={post.id} />
+
+      <CommentSection
+        postId={post.id}
+        slug={post.slug}
+        initialComments={comments}
+        isSignedIn={!!reader}
+      />
     </article>
   );
 }
