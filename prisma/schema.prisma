@@ -18,6 +18,7 @@ model Author {
   linkedinUrl String?
   githubUrl   String?
   location    String?
+  roles       String[] @default([])
   isOwner     Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
