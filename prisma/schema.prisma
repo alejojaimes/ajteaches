@@ -7,23 +7,24 @@ datasource db {
 }
 
 model Author {
-  id          String   @id @default(cuid())
-  clerkUserId String?  @unique
-  name        String
-  username    String?  @unique
-  avatar      String?
-  bio         String?
-  email       String?
-  website     String?
-  linkedinUrl String?
-  githubUrl   String?
-  location    String?
-  roles       String[] @default([])
-  interests   String[] @default([])
-  isOwner     Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  posts       Post[]
+  id               String   @id @default(cuid())
+  clerkUserId      String?  @unique
+  name             String
+  username         String?  @unique
+  avatar           String?
+  bio              String?
+  email            String?
+  website          String?
+  linkedinUrl      String?
+  githubUrl        String?
+  location         String?
+  roles            String[] @default([])
+  interests        String[] @default([])
+  featuredPostSlug String?
+  isOwner          Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  posts            Post[]
 
   @@index([clerkUserId])
 }

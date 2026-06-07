@@ -107,6 +107,27 @@ export async function getTags() {
   return prisma.tag.findMany({ orderBy: { name: 'asc' } });
 }
 
+export async function searchAuthorPosts(query: string) {
+  const author = await getCurrentAuthor();
+  if (!author) redirect('/sign-in');
+
+  return prisma.post.findMany({
+    where: {
+      authorId: author.id,
+      status: 'published',
+      ...(query.trim() ? { title: { contains: query.trim(), mode: 'insensitive' } } : {}),
+    },
+    select: {
+      slug: true,
+      title: true,
+      coverImage: true,
+      publishedAt: true,
+    },
+    orderBy: { publishedAt: 'desc' },
+    take: 20,
+  });
+}
+
 export async function publishPost(postId: string): Promise<never> {
   const author = await getCurrentAuthor();
   if (!author) redirect('/sign-in');

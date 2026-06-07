@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { updateAuthor } from '@/lib/actions/authors';
+import { FeaturedPostPicker, type FeaturedPostOption } from './FeaturedPostPicker';
 
 type Author = {
   id: string;
@@ -16,10 +17,19 @@ type Author = {
   location: string | null;
   roles: string[];
   interests: string[];
+  featuredPostSlug: string | null;
+};
+
+type FeaturedPostSummary = {
+  slug: string;
+  title: string;
+  coverImage: string | null;
+  publishedAt: Date | null;
 };
 
 type Props = {
   author: Author;
+  featuredPost: FeaturedPostSummary | null;
 };
 
 const inputClass =
@@ -101,7 +111,7 @@ function ChipField({
   );
 }
 
-export function ProfileEditor({ author }: Props) {
+export function ProfileEditor({ author, featuredPost }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatar, setAvatar] = useState(author.avatar);
   const [uploading, setUploading] = useState(false);
@@ -116,8 +126,23 @@ export function ProfileEditor({ author }: Props) {
   const [linkedinUrl, setLinkedinUrl] = useState(author.linkedinUrl ?? '');
   const [roles, setRoles] = useState<string[]>(author.roles);
   const [interests, setInterests] = useState<string[]>(author.interests);
+  const [featuredPostSlug, setFeaturedPostSlug] = useState<string | null>(author.featuredPostSlug);
+  const [featuredPostPreview, setFeaturedPostPreview] = useState<FeaturedPostSummary | null>(
+    featuredPost
+  );
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const handleSelectFeaturedPost = (post: FeaturedPostOption) => {
+    setFeaturedPostSlug(post.slug);
+    setFeaturedPostPreview(post);
+  };
+
+  const handleRemoveFeaturedPost = () => {
+    setFeaturedPostSlug(null);
+    setFeaturedPostPreview(null);
+  };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -159,6 +184,7 @@ export function ProfileEditor({ author }: Props) {
         linkedinUrl,
         roles,
         interests,
+        featuredPostSlug,
         ...(avatar && avatar !== author.avatar ? { avatar } : {}),
       });
       setSaved(true);
@@ -315,7 +341,60 @@ export function ProfileEditor({ author }: Props) {
           placeholder="Add interests (press Enter or comma)…"
           chipClassName="bg-accent/10 text-accent"
         />
+
+        {/* Featured post */}
+        <div>
+          <label className={labelClass}>Featured post</label>
+          {featuredPostPreview ? (
+            <div className="border-border bg-background rounded-button flex items-center gap-3 border px-3 py-2">
+              {featuredPostPreview.coverImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={featuredPostPreview.coverImage}
+                  alt=""
+                  className="h-10 w-14 shrink-0 rounded-md object-cover"
+                />
+              ) : (
+                <div className="bg-primary-soft h-10 w-14 shrink-0 rounded-md" />
+              )}
+              <p className="text-foreground min-w-0 flex-1 truncate text-sm font-medium">
+                {featuredPostPreview.title}
+              </p>
+              <button
+                type="button"
+                onClick={() => setPickerOpen(true)}
+                className="text-primary hover:text-primary-hover shrink-0 text-xs font-medium"
+              >
+                Change
+              </button>
+              <button
+                type="button"
+                onClick={handleRemoveFeaturedPost}
+                className="text-muted-foreground hover:text-destructive shrink-0 text-xs font-medium"
+              >
+                Remove
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setPickerOpen(true)}
+              className="border-border bg-background text-muted-foreground hover:border-primary hover:text-primary rounded-button w-full border border-dashed px-3 py-2.5 text-sm transition-colors"
+            >
+              + Choose a post to feature on your About page
+            </button>
+          )}
+          <p className="text-muted-foreground mt-1 text-xs">
+            Shown on your public About page as a sample of your writing.
+          </p>
+        </div>
       </div>
+
+      <FeaturedPostPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onSelect={handleSelectFeaturedPost}
+      />
 
       <div className="mt-7">
         <button

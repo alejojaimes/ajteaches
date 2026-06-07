@@ -1,10 +1,18 @@
 import { redirect } from 'next/navigation';
 import { getCurrentAuthor } from '@/lib/auth/get-current-author';
+import { prisma } from '@/lib/db/client';
 import { ProfileEditor } from '@/components/profile/ProfileEditor';
 
 export default async function ProfilePage() {
   const author = await getCurrentAuthor();
   if (!author) redirect('/sign-in');
+
+  const featuredPost = author.featuredPostSlug
+    ? await prisma.post.findFirst({
+        where: { slug: author.featuredPostSlug, authorId: author.id },
+        select: { slug: true, title: true, coverImage: true, publishedAt: true },
+      })
+    : null;
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -27,7 +35,7 @@ export default async function ProfilePage() {
         </div>
       </div>
 
-      <ProfileEditor author={author} />
+      <ProfileEditor author={author} featuredPost={featuredPost} />
     </div>
   );
 }

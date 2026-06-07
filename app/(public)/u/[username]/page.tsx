@@ -4,29 +4,28 @@ import { prisma } from '@/lib/db/client';
 import { ShareProfileButton } from '@/components/profile/ShareProfileButton';
 import { Reveal } from '@/components/profile/Reveal';
 
-const FEATURED_POST_SLUG = 'understanding-python-decorators-from-zero-to-practical-use';
-
 export default async function PublicProfilePage({
   params,
 }: {
   params: Promise<{ username: string }>;
 }) {
   const { username } = await params;
-  const [author, featuredPost] = await Promise.all([
-    prisma.author.findUnique({ where: { username } }),
-    prisma.post.findFirst({
-      where: { slug: FEATURED_POST_SLUG, status: 'published' },
-      select: {
-        slug: true,
-        title: true,
-        excerpt: true,
-        coverImage: true,
-        readTimeMinutes: true,
-        readTimeOverride: true,
-      },
-    }),
-  ]);
+  const author = await prisma.author.findUnique({ where: { username } });
   if (!author) notFound();
+
+  const featuredPost = author.featuredPostSlug
+    ? await prisma.post.findFirst({
+        where: { slug: author.featuredPostSlug, status: 'published' },
+        select: {
+          slug: true,
+          title: true,
+          excerpt: true,
+          coverImage: true,
+          readTimeMinutes: true,
+          readTimeOverride: true,
+        },
+      })
+    : null;
 
   const joinedDate = author.createdAt.toLocaleDateString('en-US', {
     month: 'long',
@@ -102,7 +101,9 @@ export default async function PublicProfilePage({
           delay={0.05}
           className="border-primary bg-primary-soft/40 rounded-card mt-5 border-l-2 px-4 py-3"
         >
-          <p className="text-foreground text-sm leading-relaxed">{author.bio}</p>
+          <p className="text-foreground text-sm leading-relaxed whitespace-pre-line">
+            {author.bio}
+          </p>
         </Reveal>
       )}
 
