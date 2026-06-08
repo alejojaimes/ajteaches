@@ -2,8 +2,19 @@
 
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
+import { Prisma, type PostType } from '@prisma/client';
 import { getCurrentAuthor } from '@/lib/auth/get-current-author';
 import { prisma } from '@/lib/db/client';
+
+const GITHUB_REPO_URL_RE = /^https?:\/\/github\.com\/([^/\s#?]+)\/([^/\s#?]+?)(?:\.git)?\/?$/i;
+
+export type GithubRepoSnapshot = {
+  fullName: string;
+  description: string | null;
+  language: string | null;
+  stars: number;
+  ownerAvatar: string | null;
+};
 
 function slugify(text: string): string {
   return text
@@ -43,6 +54,7 @@ export async function updatePost(
     contentJson: object;
     wordCount: number;
     tags?: string[];
+    postType?: PostType;
   }
 ): Promise<{ ok: true }> {
   const author = await getCurrentAuthor();
@@ -70,6 +82,7 @@ export async function updatePost(
       excerpt: payload.excerpt.trim() || null,
       contentJson: payload.contentJson,
       readTimeMinutes: calcReadTime(payload.wordCount),
+      ...(payload.postType !== undefined ? { postType: payload.postType } : {}),
       ...(payload.tags !== undefined
         ? {
             tags: {
@@ -90,6 +103,63 @@ export async function updatePost(
   }
 
   return { ok: true };
+}
+
+export async function setGithubRepo(
+  postId: string,
+  url: string
+): Promise<{ ok: true; repo: GithubRepoSnapshot | null }> {
+  const author = await getCurrentAuthor();
+  if (!author) throw new Error('Unauthorized');
+
+  const post = await prisma.post.findUnique({ where: { id: postId } });
+  if (!post || post.authorId !== author.id) throw new Error('Not found');
+
+  const trimmed = url.trim();
+  if (!trimmed) {
+    await prisma.post.update({
+      where: { id: postId },
+      data: { githubRepoUrl: null, githubRepoData: Prisma.DbNull },
+    });
+    return { ok: true, repo: null };
+  }
+
+  const match = GITHUB_REPO_URL_RE.exec(trimmed);
+  if (!match)
+    throw new Error('Enter a valid GitHub repository URL (https://github.com/owner/repo)');
+  const [, owner, repo] = match;
+
+  const res = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+    headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'ajteaches-bot/1.0' },
+    signal: AbortSignal.timeout(5000),
+  });
+  if (!res.ok) throw new Error('Repository not found or not public');
+
+  const data = (await res.json()) as {
+    full_name: string;
+    description: string | null;
+    language: string | null;
+    stargazers_count: number;
+    owner: { avatar_url?: string | null } | null;
+  };
+
+  const snapshot: GithubRepoSnapshot = {
+    fullName: data.full_name,
+    description: data.description,
+    language: data.language,
+    stars: data.stargazers_count,
+    ownerAvatar: data.owner?.avatar_url ?? null,
+  };
+
+  await prisma.post.update({
+    where: { id: postId },
+    data: {
+      githubRepoUrl: `https://github.com/${owner}/${repo}`,
+      githubRepoData: snapshot as unknown as Prisma.InputJsonValue,
+    },
+  });
+
+  return { ok: true, repo: snapshot };
 }
 
 export async function republishPost(postId: string): Promise<void> {

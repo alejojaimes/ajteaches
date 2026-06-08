@@ -34,8 +34,24 @@ export async function POST(req: NextRequest) {
   const dataUri = `data:${file.type};base64,${buffer.toString('base64')}`;
 
   const isAvatar = scope === 'avatar';
+  const isAttachment = scope === 'attachment';
   const postId = (formData.get('postId') as string | null)?.trim() || 'misc';
-  const folder = isAvatar ? `ajteaches/avatars/${userId}` : `ajteaches/posts/${postId}`;
+  const folder = isAvatar
+    ? `ajteaches/avatars/${userId}`
+    : isAttachment
+      ? `ajteaches/attachments/${postId}`
+      : `ajteaches/posts/${postId}`;
+
+  if (isAttachment) {
+    const result = await cloudinary.uploader.upload(dataUri, {
+      folder,
+      resource_type: 'auto',
+      use_filename: true,
+      unique_filename: true,
+    });
+    return NextResponse.json({ url: result.secure_url });
+  }
+
   const transformation = isAvatar
     ? [
         { width: 400, height: 400, crop: 'fill', gravity: 'face' },

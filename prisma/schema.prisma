@@ -52,6 +52,8 @@ model Post {
   postType         PostType         @default(blog)
   readTimeMinutes  Int              @default(1)
   readTimeOverride Int?
+  githubRepoUrl    String?
+  githubRepoData   Json?
   authorId         String
   author           Author           @relation(fields: [authorId], references: [id])
   publishedAt      DateTime?
@@ -64,6 +66,7 @@ model Post {
   likes            PostLike[]
   comments         Comment[]
   savedBy          SavedPost[]
+  attachments      PostAttachment[]
 
   @@index([slug])
   @@index([status, publishedAt])
@@ -80,6 +83,19 @@ model DraftShareLink {
   createdAt DateTime @default(now())
 
   @@index([token])
+}
+
+model PostAttachment {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  url       String
+  filename  String
+  mimeType  String
+  sizeBytes Int
+  createdAt DateTime @default(now())
+
+  @@index([postId])
 }
 
 enum EventType {

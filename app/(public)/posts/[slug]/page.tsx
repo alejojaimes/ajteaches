@@ -5,10 +5,13 @@ import { getPostComments } from '@/lib/db/comments';
 import { getLikeState } from '@/lib/actions/likes';
 import { getCurrentReader } from '@/lib/auth/get-current-reader';
 import { renderPostHTML } from '@/lib/render-post';
+import type { GithubRepoSnapshot } from '@/lib/actions/posts';
 import { CodeCopyInit } from '@/components/blog/CodeCopyInit';
 import { ReadingTracker } from '@/components/blog/ReadingTracker';
 import { LikeButton } from '@/components/blog/LikeButton';
 import { CommentSection } from '@/components/blog/CommentSection';
+import { GithubRepoCard } from '@/components/blog/GithubRepoCard';
+import { AttachmentList } from '@/components/blog/AttachmentList';
 
 export async function generateStaticParams() {
   const posts = await getPublishedPosts({ limit: 1000 });
@@ -22,6 +25,13 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
   if (!post || post.status !== 'published') notFound();
 
   const readTime = post.readTimeOverride ?? post.readTimeMinutes;
+  const githubRepo =
+    post.postType === 'tutorial' &&
+    post.githubRepoUrl &&
+    post.githubRepoData &&
+    typeof post.githubRepoData === 'object'
+      ? (post.githubRepoData as unknown as GithubRepoSnapshot)
+      : null;
 
   const [{ liked, count }, comments, reader] = await Promise.all([
     getLikeState(post.id),
@@ -73,6 +83,12 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
       )}
 
       {post.excerpt && <p className="text-muted-foreground mb-8 text-lg">{post.excerpt}</p>}
+
+      {githubRepo && post.githubRepoUrl && (
+        <GithubRepoCard url={post.githubRepoUrl} repo={githubRepo} />
+      )}
+
+      {post.postType === 'tutorial' && <AttachmentList attachments={post.attachments} />}
 
       {post.contentJson &&
       typeof post.contentJson === 'object' &&
