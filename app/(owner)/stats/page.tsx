@@ -29,6 +29,14 @@ function formatCount(value: number): string {
   return `${(value / 1000).toFixed(1)}k`;
 }
 
+function formatDuration(ms: number): string {
+  const totalSeconds = Math.round(ms / 1000);
+  if (totalSeconds < 60) return `${totalSeconds}s`;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return seconds === 0 ? `${minutes}m` : `${minutes}m ${seconds}s`;
+}
+
 export default async function StatsPage({
   searchParams,
 }: {
@@ -76,7 +84,7 @@ export default async function StatsPage({
         </div>
       </Reveal>
 
-      <Reveal delay={0.05} className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <Reveal delay={0.05} className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           label="Posts"
           value={overview.posts.value.toLocaleString('en-US')}
@@ -99,6 +107,14 @@ export default async function StatsPage({
           trend={overview.reads.trend}
           trendLabel={trendLabel}
           sparkline={overview.reads.sparkline}
+          color="var(--color-accent)"
+        />
+        <MetricCard
+          label="Avg. read time"
+          value={formatDuration(overview.avgReadDuration.value)}
+          trend={overview.avgReadDuration.trend}
+          trendLabel={trendLabel}
+          sparkline={overview.avgReadDuration.sparkline}
           color="var(--color-accent)"
         />
       </Reveal>

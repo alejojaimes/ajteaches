@@ -88,6 +88,7 @@ enum EventType {
   read_50
   read_70
   read_100
+  engagement_end
 }
 
 model PostEvent {
@@ -96,6 +97,7 @@ model PostEvent {
   post        Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
   eventType   EventType
   sessionHash String
+  durationMs  Int?
   createdAt   DateTime  @default(now())
 
   @@index([postId, eventType])

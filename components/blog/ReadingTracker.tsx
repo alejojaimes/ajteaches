@@ -15,8 +15,12 @@ type Props = {
 
 export function ReadingTracker({ postId }: Props) {
   const sentRef = useRef<Set<string>>(new Set());
+  const startRef = useRef<number | null>(null);
+  const endSentRef = useRef(false);
 
   useEffect(() => {
+    startRef.current = Date.now();
+
     const send = (eventType: string) => {
       if (sentRef.current.has(eventType)) return;
       sentRef.current.add(eventType);
@@ -26,6 +30,24 @@ export function ReadingTracker({ postId }: Props) {
         body: JSON.stringify({ postId, eventType }),
         keepalive: true,
       });
+    };
+
+    const sendEngagementEnd = () => {
+      if (endSentRef.current) return;
+      endSentRef.current = true;
+      const durationMs = Date.now() - (startRef.current ?? Date.now());
+      const payload = JSON.stringify({ postId, eventType: 'engagement_end', durationMs });
+
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon('/api/track', new Blob([payload], { type: 'application/json' }));
+      } else {
+        void fetch('/api/track', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payload,
+          keepalive: true,
+        });
+      }
     };
 
     send('view');
@@ -47,9 +69,21 @@ export function ReadingTracker({ postId }: Props) {
       requestAnimationFrame(checkProgress);
     };
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') sendEngagementEnd();
+    };
+
     checkProgress();
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', sendEngagementEnd);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', sendEngagementEnd);
+      sendEngagementEnd();
+    };
   }, [postId]);
 
   return null;

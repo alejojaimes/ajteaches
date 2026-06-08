@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { LifetimePostStats } from '@/lib/db/stats';
 
-type SortKey = 'views' | 'reads' | 'readRate';
+type SortKey = 'views' | 'reads' | 'readRate' | 'likes' | 'saves';
 
 const PREVIEW_COUNT = 5;
 
@@ -12,6 +12,8 @@ const COLUMNS: { key: SortKey; label: string }[] = [
   { key: 'views', label: 'Views' },
   { key: 'reads', label: 'Reads' },
   { key: 'readRate', label: 'Read Rate (%)' },
+  { key: 'likes', label: 'Likes' },
+  { key: 'saves', label: 'Saves' },
 ];
 
 type Props = {
@@ -29,8 +31,15 @@ export function LifetimeTable({ posts }: Props) {
   const visible = expanded ? sorted : sorted.slice(0, PREVIEW_COUNT);
 
   const handleExport = () => {
-    const header = ['Post Title', 'Views', 'Reads', 'Read Rate (%)'];
-    const rows = sorted.map((post) => [post.title, post.views, post.reads, post.readRate]);
+    const header = ['Post Title', 'Views', 'Reads', 'Read Rate (%)', 'Likes', 'Saves'];
+    const rows = sorted.map((post) => [
+      post.title,
+      post.views,
+      post.reads,
+      post.readRate,
+      post.likes,
+      post.saves,
+    ]);
     const csv = [header, ...rows]
       .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
       .join('\n');
@@ -120,6 +129,12 @@ export function LifetimeTable({ posts }: Props) {
                   >
                     {post.readRate}%
                   </span>
+                </td>
+                <td className="text-foreground px-6 py-3.5 text-right tabular-nums">
+                  {post.likes.toLocaleString('en-US')}
+                </td>
+                <td className="text-foreground px-6 py-3.5 text-right tabular-nums">
+                  {post.saves.toLocaleString('en-US')}
                 </td>
               </tr>
             ))}

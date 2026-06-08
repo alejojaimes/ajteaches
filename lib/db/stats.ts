@@ -18,6 +18,7 @@ export type StatsOverview = {
   posts: OverviewMetric;
   views: OverviewMetric;
   reads: OverviewMetric;
+  avgReadDuration: OverviewMetric;
 };
 
 export type PerformancePoint = {
@@ -33,11 +34,14 @@ export type LifetimePostStats = {
   views: number;
   reads: number;
   readRate: number;
+  likes: number;
+  saves: number;
 };
 
 const SPARKLINE_DAYS = 14;
 const READ_EVENT: EventType = 'read_70';
 const VIEW_EVENT: EventType = 'view';
+const ENGAGEMENT_END_EVENT: EventType = 'engagement_end';
 
 function addDays(date: Date, days: number): Date {
   const next = new Date(date);
@@ -135,6 +139,62 @@ function getDailyPostsSparkline(posts: { publishedAt: Date | null }[], now: Date
   return buckets;
 }
 
+async function getAvgDurationMs(
+  postIds: string[],
+  window?: { gte?: Date; lt?: Date }
+): Promise<number> {
+  if (postIds.length === 0) return 0;
+  const { _avg } = await prisma.postEvent.aggregate({
+    where: {
+      postId: { in: postIds },
+      eventType: ENGAGEMENT_END_EVENT,
+      durationMs: { not: null },
+      ...(window
+        ? {
+            createdAt: {
+              ...(window.gte ? { gte: window.gte } : {}),
+              ...(window.lt ? { lt: window.lt } : {}),
+            },
+          }
+        : {}),
+    },
+    _avg: { durationMs: true },
+  });
+  return Math.round(_avg.durationMs ?? 0);
+}
+
+async function getDailyAvgDurationSparkline(postIds: string[], now: Date): Promise<number[]> {
+  const since = startOfDay(addDays(now, -(SPARKLINE_DAYS - 1)));
+  if (postIds.length === 0) return Array<number>(SPARKLINE_DAYS).fill(0);
+
+  const events = await prisma.postEvent.findMany({
+    where: {
+      postId: { in: postIds },
+      eventType: ENGAGEMENT_END_EVENT,
+      durationMs: { not: null },
+      createdAt: { gte: since },
+    },
+    select: { createdAt: true, durationMs: true },
+  });
+
+  const sums = Array<number>(SPARKLINE_DAYS).fill(0);
+  const counts = Array<number>(SPARKLINE_DAYS).fill(0);
+  for (const event of events) {
+    if (event.durationMs === null) continue;
+    const dayIndex = Math.floor(
+      (startOfDay(event.createdAt).getTime() - since.getTime()) / 86_400_000
+    );
+    if (dayIndex >= 0 && dayIndex < SPARKLINE_DAYS) {
+      sums[dayIndex] = (sums[dayIndex] ?? 0) + event.durationMs;
+      counts[dayIndex] = (counts[dayIndex] ?? 0) + 1;
+    }
+  }
+  return sums.map((sum, i) => {
+    const count = counts[i] ?? 0;
+    return count > 0 ? Math.round(sum / count) : 0;
+  });
+}
+
 export async function getStatsOverview(
   authorId: string,
   range: StatsRange
@@ -165,6 +225,9 @@ export async function getStatsOverview(
     previousReads,
     viewsSparkline,
     readsSparkline,
+    currentAvgDuration,
+    previousAvgDuration,
+    avgDurationSparkline,
   ] = await Promise.all([
     countEvents(postIds, VIEW_EVENT),
     countEvents(postIds, READ_EVENT),
@@ -174,6 +237,9 @@ export async function getStatsOverview(
     countEvents(postIds, READ_EVENT, { gte: previousStart, lt: previousEnd }),
     getDailySparkline(postIds, VIEW_EVENT, now),
     getDailySparkline(postIds, READ_EVENT, now),
+    getAvgDurationMs(postIds, { gte: currentStart }),
+    getAvgDurationMs(postIds, { gte: previousStart, lt: previousEnd }),
+    getDailyAvgDurationSparkline(postIds, now),
   ]);
 
   return {
@@ -191,6 +257,11 @@ export async function getStatsOverview(
       value: totalReads,
       trend: trendOf(currentReads, previousReads),
       sparkline: readsSparkline,
+    },
+    avgReadDuration: {
+      value: currentAvgDuration,
+      trend: trendOf(currentAvgDuration, previousAvgDuration),
+      sparkline: avgDurationSparkline,
     },
   };
 }
@@ -249,7 +320,7 @@ export async function getLifetimeByPost(authorId: string): Promise<LifetimePostS
   if (posts.length === 0) return [];
 
   const postIds = posts.map((post) => post.id);
-  const [viewCounts, readCounts] = await Promise.all([
+  const [viewCounts, readCounts, likeCounts, saveCounts] = await Promise.all([
     prisma.postEvent.groupBy({
       by: ['postId'],
       where: { postId: { in: postIds }, eventType: VIEW_EVENT },
@@ -260,10 +331,22 @@ export async function getLifetimeByPost(authorId: string): Promise<LifetimePostS
       where: { postId: { in: postIds }, eventType: READ_EVENT },
       _count: { _all: true },
     }),
+    prisma.postLike.groupBy({
+      by: ['postId'],
+      where: { postId: { in: postIds } },
+      _count: { _all: true },
+    }),
+    prisma.savedPost.groupBy({
+      by: ['postId'],
+      where: { postId: { in: postIds } },
+      _count: { _all: true },
+    }),
   ]);
 
   const viewsByPost = new Map(viewCounts.map((row) => [row.postId, row._count._all]));
   const readsByPost = new Map(readCounts.map((row) => [row.postId, row._count._all]));
+  const likesByPost = new Map(likeCounts.map((row) => [row.postId, row._count._all]));
+  const savesByPost = new Map(saveCounts.map((row) => [row.postId, row._count._all]));
 
   return posts
     .map((post) => {
@@ -276,6 +359,8 @@ export async function getLifetimeByPost(authorId: string): Promise<LifetimePostS
         views,
         reads,
         readRate: views > 0 ? Math.round((reads / views) * 100) : 0,
+        likes: likesByPost.get(post.id) ?? 0,
+        saves: savesByPost.get(post.id) ?? 0,
       };
     })
     .sort((a, b) => b.views - a.views);

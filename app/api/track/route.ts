@@ -10,9 +10,14 @@ export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => null)) as {
     postId?: string;
     eventType?: string;
+    durationMs?: number;
   } | null;
   const postId = body?.postId?.trim();
   const eventType = body?.eventType;
+  const durationMs =
+    typeof body?.durationMs === 'number' && Number.isFinite(body.durationMs) && body.durationMs > 0
+      ? Math.round(body.durationMs)
+      : null;
 
   if (!postId || !eventType || !EVENT_TYPES.has(eventType)) {
     return NextResponse.json({ error: 'Invalid event payload' }, { status: 400 });
@@ -31,14 +36,23 @@ export async function POST(req: NextRequest) {
 
   const sessionHash = await getSessionHash();
 
-  const existing = await prisma.postEvent.findFirst({
-    where: { postId, sessionHash, eventType: eventType as EventType },
-    select: { id: true },
-  });
-  if (existing) return NextResponse.json({ ok: true, tracked: false });
+  // engagement_end carries a per-visit duration measurement and isn't deduplicated —
+  // unlike milestone events (recorded once per session), each visit's duration is meaningful.
+  if (eventType !== 'engagement_end') {
+    const existing = await prisma.postEvent.findFirst({
+      where: { postId, sessionHash, eventType: eventType as EventType },
+      select: { id: true },
+    });
+    if (existing) return NextResponse.json({ ok: true, tracked: false });
+  }
 
   await prisma.postEvent.create({
-    data: { postId, sessionHash, eventType: eventType as EventType },
+    data: {
+      postId,
+      sessionHash,
+      eventType: eventType as EventType,
+      ...(eventType === 'engagement_end' && durationMs !== null ? { durationMs } : {}),
+    },
   });
 
   return NextResponse.json({ ok: true, tracked: true });
