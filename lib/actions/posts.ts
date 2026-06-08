@@ -5,6 +5,8 @@ import { revalidatePath } from 'next/cache';
 import { Prisma, type PostType } from '@prisma/client';
 import { getCurrentAuthor } from '@/lib/auth/get-current-author';
 import { prisma } from '@/lib/db/client';
+import { notifyReadersOnPostPublished } from '@/lib/email/notify';
+import { getFirstContentImage } from '@/lib/render-post';
 
 const GITHUB_REPO_URL_RE = /^https?:\/\/github\.com\/([^/\s#?]+)\/([^/\s#?]+?)(?:\.git)?\/?$/i;
 
@@ -211,6 +213,7 @@ export async function publishPost(postId: string): Promise<never> {
     where: { slug: base, NOT: { id: postId } },
   });
   const finalSlug = existing ? `${base}-${postId.slice(-6)}` : base;
+  const isFirstPublish = post.publishedAt === null;
 
   await prisma.post.update({
     where: { id: postId },
@@ -220,6 +223,18 @@ export async function publishPost(postId: string): Promise<never> {
       publishedAt: post.publishedAt ?? new Date(),
     },
   });
+
+  if (isFirstPublish) {
+    notifyReadersOnPostPublished({
+      title,
+      excerpt: post.excerpt,
+      coverImage: post.coverImage ?? getFirstContentImage(post.contentJson),
+      slug: finalSlug,
+      author: { name: author.name },
+    }).catch((error: unknown) => {
+      console.error('Failed to send new post notifications', error);
+    });
+  }
 
   revalidatePath('/');
   revalidatePath(`/posts/${finalSlug}`);
