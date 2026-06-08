@@ -7,6 +7,7 @@ import { getLikeState } from '@/lib/actions/likes';
 import { getCurrentReader } from '@/lib/auth/get-current-reader';
 import { renderPostHTML } from '@/lib/render-post';
 import { getInitials } from '@/lib/utils';
+import { getServerDictionary } from '@/lib/i18n/get-locale';
 import type { GithubRepoSnapshot } from '@/lib/actions/posts';
 import { CodeCopyInit } from '@/components/blog/CodeCopyInit';
 import { ReadingTracker } from '@/components/blog/ReadingTracker';
@@ -35,10 +36,11 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
       ? (post.githubRepoData as unknown as GithubRepoSnapshot)
       : null;
 
-  const [{ liked, count }, comments, reader] = await Promise.all([
+  const [{ liked, count }, comments, reader, t] = await Promise.all([
     getLikeState(post.id),
     getPostComments(post.id),
     getCurrentReader(),
+    getServerDictionary(),
   ]);
 
   return (
@@ -77,16 +79,14 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
       {!reader && (
         <div className="border-border bg-card mb-8 flex flex-col items-start gap-3 rounded-xl border p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-foreground text-sm font-semibold">Enjoying this post?</p>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Create a free account to like, comment, and save posts for later.
-            </p>
+            <p className="text-foreground text-sm font-semibold">{t.ctaBanner.title}</p>
+            <p className="text-muted-foreground mt-1 text-sm">{t.ctaBanner.description}</p>
           </div>
           <Link
             href={`/sign-up?redirect_url=${encodeURIComponent(`/posts/${post.slug}`)}`}
             className="rounded-button bg-primary hover:bg-primary-hover shrink-0 px-5 py-2 text-sm font-medium text-white transition-colors"
           >
-            Sign up
+            {t.ctaBanner.signUp}
           </Link>
         </div>
       )}
