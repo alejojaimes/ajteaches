@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { toggleSave } from '@/lib/actions/saves';
 
 type Props = {
@@ -10,6 +11,8 @@ type Props = {
 
 export function BookmarkButton({ postId, initialSaved }: Props) {
   const [saved, setSaved] = useState(initialSaved);
+  const router = useRouter();
+  const pathname = usePathname();
 
   function handleClick(e: React.MouseEvent) {
     e.preventDefault();
@@ -18,14 +21,14 @@ export function BookmarkButton({ postId, initialSaved }: Props) {
     const nextSaved = !saved;
     setSaved(nextSaved);
 
-    toggleSave(postId)
-      .then((result) => {
-        setSaved(result.saved);
-      })
-      .catch(() => {
-        // toggleSave redirects unauthenticated readers to /sign-in; ignore the
-        // navigation error here and let the redirect take over.
-      });
+    toggleSave(postId).then((result) => {
+      if ('requiresAuth' in result) {
+        setSaved(initialSaved);
+        router.push(`/sign-in?redirect_url=${encodeURIComponent(pathname)}`);
+        return;
+      }
+      setSaved(result.saved);
+    });
   }
 
   return (

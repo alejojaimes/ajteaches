@@ -5,6 +5,7 @@ import { ShareProfileButton } from '@/components/profile/ShareProfileButton';
 import { Reveal } from '@/components/profile/Reveal';
 import { WorkTimeline } from '@/components/profile/WorkTimeline';
 import { toWorkEntries } from '@/lib/work-entries';
+import { getInitials } from '@/lib/utils';
 
 export default async function PublicProfilePage({
   params,
@@ -78,14 +79,7 @@ export default async function PublicProfilePage({
             />
           ) : (
             <div className="bg-primary flex h-28 w-28 items-center justify-center rounded-full border-4 border-white shadow-md transition-transform duration-300 hover:scale-105">
-              <span className="text-3xl font-bold text-white">
-                {author.name
-                  .split(' ')
-                  .map((w) => w[0])
-                  .join('')
-                  .slice(0, 2)
-                  .toLowerCase()}
-              </span>
+              <span className="text-3xl font-bold text-white">{getInitials(author.name)}</span>
             </div>
           )}
         </div>

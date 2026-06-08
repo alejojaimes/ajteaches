@@ -127,18 +127,21 @@ model Tag {
 }
 
 model Reader {
-  id          String     @id @default(cuid())
-  clerkUserId String     @unique
-  name        String
-  email       String?
-  githubUrl   String?
-  phone       String?
-  avatar      String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  likes       PostLike[]
-  comments    Comment[]
-  savedPosts  SavedPost[]
+  id                String      @id @default(cuid())
+  clerkUserId       String      @unique
+  name              String
+  email             String?
+  bio               String?
+  githubUrl         String?
+  phone             String?
+  avatar            String?
+  newsletterOptIn   Boolean     @default(false)
+  newsletterOptInAt DateTime?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  likes             PostLike[]
+  comments          Comment[]
+  savedPosts        SavedPost[]
 
   @@index([clerkUserId])
 }
@@ -183,18 +186,4 @@ model SavedPost {
   @@unique([postId, readerId])
   @@index([postId])
   @@index([readerId])
-}
-
-model Subscriber {
-  id                String    @id @default(cuid())
-  email             String    @unique
-  confirmed         Boolean   @default(false)
-  confirmationToken String?   @unique
-  unsubscribeToken  String    @unique
-  subscribedAt      DateTime  @default(now())
-  confirmedAt       DateTime?
-  unsubscribedAt    DateTime?
-
-  @@index([email])
-  @@index([confirmed])
 }

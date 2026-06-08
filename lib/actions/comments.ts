@@ -6,13 +6,15 @@ import { getCurrentReader } from '@/lib/auth/get-current-reader';
 import { getCurrentAuthor } from '@/lib/auth/get-current-author';
 import { prisma } from '@/lib/db/client';
 
+export type CreateCommentResult = { ok: true } | { requiresAuth: true };
+
 export async function createComment(input: {
   postId: string;
   slug: string;
   body: string;
-}): Promise<{ ok: true }> {
+}): Promise<CreateCommentResult> {
   const reader = await getCurrentReader();
-  if (!reader) redirect('/sign-in');
+  if (!reader) return { requiresAuth: true };
 
   const body = input.body.trim();
   if (!body) throw new Error('Comment body cannot be empty');
