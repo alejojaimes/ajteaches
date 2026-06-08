@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getPostBySlug, getPublishedPosts } from '@/lib/db/posts';
@@ -5,6 +6,7 @@ import { getPostComments } from '@/lib/db/comments';
 import { getLikeState } from '@/lib/actions/likes';
 import { getCurrentReader } from '@/lib/auth/get-current-reader';
 import { renderPostHTML } from '@/lib/render-post';
+import { getInitials } from '@/lib/utils';
 import type { GithubRepoSnapshot } from '@/lib/actions/posts';
 import { CodeCopyInit } from '@/components/blog/CodeCopyInit';
 import { ReadingTracker } from '@/components/blog/ReadingTracker';
@@ -64,13 +66,30 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
           <Avatar size="sm">
             {post.author.avatar && <AvatarImage src={post.author.avatar} alt={post.author.name} />}
             <AvatarFallback className="bg-primary text-[10px] font-bold text-white">
-              aj
+              {getInitials(post.author.name)}
             </AvatarFallback>
           </Avatar>
           <span className="text-muted-foreground text-sm">{post.author.name}</span>
         </div>
         <LikeButton postId={post.id} initialLiked={liked} initialCount={count} />
       </div>
+
+      {!reader && (
+        <div className="border-border bg-card mb-8 flex flex-col items-start gap-3 rounded-xl border p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-foreground text-sm font-semibold">Enjoying this post?</p>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Create a free account to like, comment, and save posts for later.
+            </p>
+          </div>
+          <Link
+            href={`/sign-up?redirect_url=${encodeURIComponent(`/posts/${post.slug}`)}`}
+            className="rounded-button bg-primary hover:bg-primary-hover shrink-0 px-5 py-2 text-sm font-medium text-white transition-colors"
+          >
+            Sign up
+          </Link>
+        </div>
+      )}
 
       {post.coverImage && (
         <div className="mb-8 overflow-hidden rounded-xl">

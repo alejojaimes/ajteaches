@@ -1,13 +1,15 @@
 'use server';
 
-import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { getCurrentReader } from '@/lib/auth/get-current-reader';
 import { prisma } from '@/lib/db/client';
 
-export async function toggleSave(postId: string): Promise<{ saved: boolean }> {
+export type ToggleSaveResult = { saved: boolean } | { requiresAuth: true };
+export type TogglePinResult = { pinned: boolean } | { requiresAuth: true };
+
+export async function toggleSave(postId: string): Promise<ToggleSaveResult> {
   const reader = await getCurrentReader();
-  if (!reader) redirect('/sign-in');
+  if (!reader) return { requiresAuth: true };
 
   const existing = await prisma.savedPost.findUnique({
     where: { postId_readerId: { postId, readerId: reader.id } },
@@ -24,9 +26,9 @@ export async function toggleSave(postId: string): Promise<{ saved: boolean }> {
   return { saved: !existing };
 }
 
-export async function togglePin(postId: string): Promise<{ pinned: boolean }> {
+export async function togglePin(postId: string): Promise<TogglePinResult> {
   const reader = await getCurrentReader();
-  if (!reader) redirect('/sign-in');
+  if (!reader) return { requiresAuth: true };
 
   const existing = await prisma.savedPost.findUnique({
     where: { postId_readerId: { postId, readerId: reader.id } },

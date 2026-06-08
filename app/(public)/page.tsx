@@ -1,6 +1,7 @@
 import { getPublishedPosts } from '@/lib/db/posts';
 import { getSavedPostIds } from '@/lib/db/saves';
 import { getCurrentReader } from '@/lib/auth/get-current-reader';
+import { getFirstContentImage } from '@/lib/render-post';
 import { PostCard } from '@/components/blog/PostCard';
 import { NewsletterSection } from '@/components/blog/NewsletterSection';
 
@@ -25,12 +26,19 @@ export default async function Home() {
           <p className="text-muted-foreground col-span-3 text-center">No posts yet.</p>
         ) : (
           posts.map((post) => (
-            <PostCard key={post.id} post={post} initialSaved={savedPostIds.has(post.id)} />
+            <PostCard
+              key={post.id}
+              post={{
+                ...post,
+                coverImage: post.coverImage ?? getFirstContentImage(post.contentJson),
+              }}
+              initialSaved={savedPostIds.has(post.id)}
+            />
           ))
         )}
       </section>
       <div className="mt-16">
-        <NewsletterSection />
+        <NewsletterSection reader={reader ? { newsletterOptIn: reader.newsletterOptIn } : null} />
       </div>
     </div>
   );

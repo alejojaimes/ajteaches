@@ -10,6 +10,25 @@ type TiptapNode = {
   text?: string;
 };
 
+export function getFirstContentImage(contentJson: unknown): string | null {
+  if (!contentJson || typeof contentJson !== 'object' || Array.isArray(contentJson)) return null;
+
+  const queue: TiptapNode[] = [contentJson as TiptapNode];
+  while (queue.length > 0) {
+    const node = queue.shift();
+    if (!node) continue;
+
+    if (node.type === 'image') {
+      const src = node.attrs?.src;
+      if (typeof src === 'string' && src) return src;
+    }
+
+    if (node.content) queue.push(...node.content);
+  }
+
+  return null;
+}
+
 type HastNode = {
   type: 'text' | 'element' | 'root';
   value?: string;

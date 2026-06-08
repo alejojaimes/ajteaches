@@ -5,7 +5,7 @@ import { getAllCommentsForModeration } from '@/lib/db/comments';
 import { deleteComment } from '@/lib/actions/comments';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { DeleteCommentButton } from '@/components/comments/DeleteCommentButton';
-import { formatRelativeTime } from '@/lib/utils';
+import { formatRelativeTime, getInitials } from '@/lib/utils';
 
 export default async function CommentsPage() {
   const author = await getCurrentAuthor();
@@ -38,7 +38,7 @@ export default async function CommentsPage() {
                     {comment.reader.avatar && (
                       <AvatarImage src={comment.reader.avatar} alt={comment.reader.name} />
                     )}
-                    <AvatarFallback>{comment.reader.name.slice(0, 2).toLowerCase()}</AvatarFallback>
+                    <AvatarFallback>{getInitials(comment.reader.name)}</AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline gap-2">

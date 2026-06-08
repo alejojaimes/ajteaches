@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { formatRelativeTime } from '@/lib/utils';
+import { formatRelativeTime, getInitials } from '@/lib/utils';
 import { createComment } from '@/lib/actions/comments';
 
 export type CommentItem = {
@@ -26,6 +27,8 @@ const textareaClass =
 export function CommentSection({ postId, slug, initialComments, isSignedIn }: Props) {
   const [body, setBody] = useState('');
   const [posting, setPosting] = useState(false);
+  const pathname = usePathname();
+  const signInHref = `/sign-in?redirect_url=${encodeURIComponent(pathname)}`;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +39,11 @@ export function CommentSection({ postId, slug, initialComments, isSignedIn }: Pr
 
     setPosting(true);
     try {
-      await createComment({ postId, slug, body: trimmed });
+      const result = await createComment({ postId, slug, body: trimmed });
+      if ('requiresAuth' in result) {
+        window.location.href = signInHref;
+        return;
+      }
       setBody('');
     } finally {
       setPosting(false);
@@ -57,7 +64,7 @@ export function CommentSection({ postId, slug, initialComments, isSignedIn }: Pr
                 {comment.reader.avatar && (
                   <AvatarImage src={comment.reader.avatar} alt={comment.reader.name} />
                 )}
-                <AvatarFallback>{comment.reader.name.slice(0, 2).toLowerCase()}</AvatarFallback>
+                <AvatarFallback>{getInitials(comment.reader.name)}</AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline gap-2">
@@ -96,7 +103,7 @@ export function CommentSection({ postId, slug, initialComments, isSignedIn }: Pr
           </form>
         ) : (
           <p className="text-muted-foreground text-sm">
-            <Link href="/sign-in" className="text-primary hover:text-primary-hover font-medium">
+            <Link href={signInHref} className="text-primary hover:text-primary-hover font-medium">
               Sign in
             </Link>{' '}
             to comment

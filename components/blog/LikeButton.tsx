@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { Heart } from 'lucide-react';
 import { toggleLike } from '@/lib/actions/likes';
 
@@ -13,6 +14,8 @@ type Props = {
 export function LikeButton({ postId, initialLiked, initialCount }: Props) {
   const [liked, setLiked] = useState(initialLiked);
   const [count, setCount] = useState(initialCount);
+  const router = useRouter();
+  const pathname = usePathname();
 
   function handleClick(e: React.MouseEvent) {
     e.preventDefault();
@@ -22,15 +25,16 @@ export function LikeButton({ postId, initialLiked, initialCount }: Props) {
     setLiked(nextLiked);
     setCount((c) => c + (nextLiked ? 1 : -1));
 
-    toggleLike(postId)
-      .then((result) => {
-        setLiked(result.liked);
-        setCount(result.count);
-      })
-      .catch(() => {
-        // toggleLike redirects unauthenticated readers to /sign-in; ignore the
-        // navigation error here and let the redirect take over.
-      });
+    toggleLike(postId).then((result) => {
+      if ('requiresAuth' in result) {
+        setLiked(initialLiked);
+        setCount(initialCount);
+        router.push(`/sign-in?redirect_url=${encodeURIComponent(pathname)}`);
+        return;
+      }
+      setLiked(result.liked);
+      setCount(result.count);
+    });
   }
 
   return (

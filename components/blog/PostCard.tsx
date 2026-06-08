@@ -1,5 +1,13 @@
 import Link from 'next/link';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { getInitials } from '@/lib/utils';
 import { BookmarkButton } from './BookmarkButton';
+
+const cardDateFormatter = new Intl.DateTimeFormat('en-US', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+});
 
 type Props = {
   post: {
@@ -64,9 +72,19 @@ export function PostCard({ post, initialSaved = false }: Props) {
           )}
         </div>
 
-        {/* Bottom row: author · date · read time */}
-        <div className="text-muted-foreground mt-4 text-xs">
-          {post.author.name} · {post.publishedAt?.toLocaleDateString('en-US')} · {readTime} min read
+        {/* Bottom row: author avatar + name, formatted date, read time */}
+        <div className="mt-4 flex items-center gap-2.5">
+          <Avatar size="sm">
+            {post.author.avatar && <AvatarImage src={post.author.avatar} alt={post.author.name} />}
+            <AvatarFallback className="text-[10px]">{getInitials(post.author.name)}</AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            <p className="text-foreground truncate text-xs font-medium">{post.author.name}</p>
+            <p className="text-muted-foreground text-xs">
+              {post.publishedAt && cardDateFormatter.format(post.publishedAt)} · Takes {readTime}{' '}
+              min to read
+            </p>
+          </div>
         </div>
       </article>
     </Link>
