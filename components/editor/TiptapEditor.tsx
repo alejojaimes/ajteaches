@@ -10,6 +10,8 @@ import { Image } from '@tiptap/extension-image';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import { createLowlight, common } from 'lowlight';
 import type { Editor } from '@tiptap/core';
+import type { PostType } from '@prisma/client';
+import type { GithubRepoSnapshot } from '@/lib/actions/posts';
 import { EmbedNode } from '@/lib/extensions/embed';
 import { EmbedCardView } from '@/components/editor/EmbedCardView';
 import { CodeBlockView } from '@/components/editor/CodeBlockView';
@@ -17,6 +19,12 @@ import { BubbleToolbar } from '@/components/editor/BubbleToolbar';
 import { SlashMenu } from '@/components/editor/SlashMenu';
 
 const lowlight = createLowlight(common);
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -27,6 +35,15 @@ export type SavePayload = {
   contentJson: string;
   wordCount: number;
   tags: string[];
+  postType: PostType;
+};
+
+export type AttachmentItem = {
+  id: string;
+  url: string;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
 };
 
 type Props = {
@@ -36,7 +53,19 @@ type Props = {
   initialContent?: object | null;
   initialTags?: string[];
   allTags?: string[];
+  initialPostType?: PostType;
+  initialGithubRepoUrl?: string;
+  initialGithubRepo?: GithubRepoSnapshot | null;
+  initialAttachments?: AttachmentItem[];
   onSave?: (payload: SavePayload) => Promise<void>;
+  onSetGithubRepo?: (url: string) => Promise<{ ok: true; repo: GithubRepoSnapshot | null }>;
+  onAddAttachment?: (data: {
+    url: string;
+    filename: string;
+    mimeType: string;
+    sizeBytes: number;
+  }) => Promise<{ ok: true; id: string }>;
+  onRemoveAttachment?: (attachmentId: string) => Promise<{ ok: true }>;
 };
 
 export function TiptapEditor({
@@ -46,12 +75,20 @@ export function TiptapEditor({
   initialContent = null,
   initialTags = [],
   allTags = [],
+  initialPostType = 'blog',
+  initialGithubRepoUrl = '',
+  initialGithubRepo = null,
+  initialAttachments = [],
   onSave,
+  onSetGithubRepo,
+  onAddAttachment,
+  onRemoveAttachment,
 }: Props) {
   const [title, setTitle] = useState(initialTitle);
   const [excerpt, setExcerpt] = useState(initialExcerpt);
   const [tags, setTags] = useState<string[]>(initialTags);
   const [tagInput, setTagInput] = useState('');
+  const [postType, setPostType] = useState<PostType>(initialPostType);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [uploading, setUploading] = useState(false);
   const [mentionOpen, setMentionOpen] = useState(false);
@@ -60,11 +97,19 @@ export function TiptapEditor({
   const [embedOpen, setEmbedOpen] = useState(false);
   const [embedUrl, setEmbedUrl] = useState('');
   const [embedLoading, setEmbedLoading] = useState(false);
+  const [githubRepoUrl, setGithubRepoUrl] = useState(initialGithubRepoUrl);
+  const [githubRepo, setGithubRepoState] = useState<GithubRepoSnapshot | null>(initialGithubRepo);
+  const [githubRepoLoading, setGithubRepoLoading] = useState(false);
+  const [githubRepoError, setGithubRepoError] = useState('');
+  const [attachments, setAttachments] = useState<AttachmentItem[]>(initialAttachments);
+  const [attachmentUploading, setAttachmentUploading] = useState(false);
   const titleRef = useRef(title);
   const excerptRef = useRef(excerpt);
   const tagsRef = useRef(tags);
+  const postTypeRef = useRef(postType);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputId = useId();
+  const attachmentInputId = useId();
   const mentionNameId = useId();
 
   useEffect(() => {
@@ -74,6 +119,10 @@ export function TiptapEditor({
   useEffect(() => {
     excerptRef.current = excerpt;
   }, [excerpt]);
+
+  useEffect(() => {
+    postTypeRef.current = postType;
+  }, [postType]);
 
   useEffect(() => {
     tagsRef.current = tags;
@@ -107,6 +156,7 @@ export function TiptapEditor({
           contentJson: JSON.stringify(editorInstance.getJSON()),
           wordCount: (editorInstance.storage.characterCount as { words: () => number }).words(),
           tags: tagsRef.current,
+          postType: postTypeRef.current,
         });
         setSaveStatus('saved');
       } catch {
@@ -164,6 +214,78 @@ export function TiptapEditor({
   const handleExcerptChange = (value: string) => {
     setExcerpt(value);
     if (editor) scheduleSave(editor);
+  };
+
+  const handlePostTypeChange = (value: PostType) => {
+    setPostType(value);
+    if (editor) scheduleSave(editor);
+  };
+
+  const fetchGithubRepo = async () => {
+    if (!onSetGithubRepo || githubRepoLoading) return;
+    setGithubRepoError('');
+    setGithubRepoLoading(true);
+    try {
+      const { repo } = await onSetGithubRepo(githubRepoUrl);
+      setGithubRepoState(repo);
+    } catch (err) {
+      setGithubRepoError(err instanceof Error ? err.message : 'Failed to load repository');
+    } finally {
+      setGithubRepoLoading(false);
+    }
+  };
+
+  const clearGithubRepo = async () => {
+    if (!onSetGithubRepo || githubRepoLoading) return;
+    setGithubRepoError('');
+    setGithubRepoLoading(true);
+    try {
+      await onSetGithubRepo('');
+      setGithubRepoUrl('');
+      setGithubRepoState(null);
+    } catch (err) {
+      setGithubRepoError(err instanceof Error ? err.message : 'Failed to clear repository');
+    } finally {
+      setGithubRepoLoading(false);
+    }
+  };
+
+  const handleAttachmentUpload = async (file: File) => {
+    if (!onAddAttachment || attachmentUploading) return;
+    setAttachmentUploading(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('postId', postId);
+      form.append('scope', 'attachment');
+      const res = await fetch('/api/upload', { method: 'POST', body: form });
+      if (!res.ok) throw new Error('Upload failed');
+      const { url } = (await res.json()) as { url: string };
+      const { id } = await onAddAttachment({
+        url,
+        filename: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        sizeBytes: file.size,
+      });
+      setAttachments((prev) => [
+        ...prev,
+        { id, url, filename: file.name, mimeType: file.type, sizeBytes: file.size },
+      ]);
+    } catch {
+      // silent — user sees no attachment added
+    } finally {
+      setAttachmentUploading(false);
+    }
+  };
+
+  const handleRemoveAttachment = async (attachmentId: string) => {
+    if (!onRemoveAttachment) return;
+    try {
+      await onRemoveAttachment(attachmentId);
+      setAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
+    } catch {
+      // silent
+    }
   };
 
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -271,8 +393,26 @@ export function TiptapEditor({
 
   return (
     <div className="mx-auto max-w-[700px] py-12">
-      <div className="mb-8 flex items-center justify-between">
-        {statusNode}
+      <div className="mb-8 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          {statusNode}
+          <div className="bg-primary-soft/50 rounded-button flex gap-1 p-1">
+            {(['blog', 'tutorial'] as const).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => handlePostTypeChange(type)}
+                className={`rounded-button px-2.5 py-1 text-xs font-medium capitalize transition-colors ${
+                  postType === type
+                    ? 'bg-card text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
+        </div>
         <span className="text-muted-foreground text-xs">
           {wordCount} words · {readTime} min read
         </span>
@@ -365,6 +505,126 @@ export function TiptapEditor({
           </div>
         )}
       </div>
+
+      {postType === 'tutorial' && (
+        <div className="border-border bg-card rounded-card mb-6 border p-4">
+          <p className="text-foreground mb-3 text-sm font-medium">Tutorial settings</p>
+
+          <div className="mb-4">
+            <label className="text-muted-foreground mb-1 block text-xs">GitHub repository</label>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={githubRepoUrl}
+                onChange={(e) => setGithubRepoUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') void fetchGithubRepo();
+                }}
+                placeholder="https://github.com/owner/repo"
+                className="border-border text-foreground focus:ring-primary flex-1 rounded-md border px-3 py-1.5 text-sm outline-none focus:ring-1"
+              />
+              <button
+                type="button"
+                onClick={() => void fetchGithubRepo()}
+                disabled={githubRepoLoading || !githubRepoUrl.trim()}
+                className="rounded-button bg-primary hover:bg-primary-hover px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+              >
+                {githubRepoLoading ? 'Loading…' : 'Fetch preview'}
+              </button>
+              {githubRepo && (
+                <button
+                  type="button"
+                  onClick={() => void clearGithubRepo()}
+                  disabled={githubRepoLoading}
+                  className="text-muted-foreground hover:text-foreground px-2 text-xs disabled:opacity-50"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+            {githubRepoError && (
+              <p className="text-destructive mt-1.5 text-xs">{githubRepoError}</p>
+            )}
+            {githubRepo && (
+              <div className="border-border bg-background mt-2 flex items-start gap-3 rounded-md border p-3">
+                {githubRepo.ownerAvatar && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={githubRepo.ownerAvatar}
+                    alt=""
+                    className="h-9 w-9 shrink-0 rounded-full"
+                  />
+                )}
+                <div className="min-w-0">
+                  <p className="text-foreground truncate text-sm font-medium">
+                    {githubRepo.fullName}
+                  </p>
+                  {githubRepo.description && (
+                    <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">
+                      {githubRepo.description}
+                    </p>
+                  )}
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    {githubRepo.language && <span>{githubRepo.language} · </span>}⭐{' '}
+                    {githubRepo.stars.toLocaleString('en-US')}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label
+              htmlFor={attachmentInputId}
+              className={`text-muted-foreground hover:text-foreground inline-block cursor-pointer text-xs ${attachmentUploading ? 'opacity-50' : ''}`}
+            >
+              {attachmentUploading ? 'Uploading…' : '+ Attach file'}
+            </label>
+            <input
+              id={attachmentInputId}
+              type="file"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void handleAttachmentUpload(file);
+                e.target.value = '';
+              }}
+            />
+            {attachments.length > 0 && (
+              <ul className="mt-2 space-y-1.5">
+                {attachments.map((attachment) => (
+                  <li
+                    key={attachment.id}
+                    className="border-border bg-background flex items-center justify-between gap-2 rounded-md border px-3 py-1.5 text-sm"
+                  >
+                    <a
+                      href={attachment.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-foreground hover:text-primary min-w-0 truncate"
+                    >
+                      {attachment.filename}
+                    </a>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="text-muted-foreground text-xs">
+                        {formatFileSize(attachment.sizeBytes)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => void handleRemoveAttachment(attachment.id)}
+                        className="text-muted-foreground hover:text-destructive leading-none"
+                        aria-label={`Remove ${attachment.filename}`}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
 
       {editor && <BubbleToolbar editor={editor} />}
       {editor && (

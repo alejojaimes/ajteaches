@@ -2,7 +2,16 @@ import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getCurrentAuthor } from '@/lib/auth/get-current-author';
 import { prisma } from '@/lib/db/client';
-import { updatePost, publishPost, republishPost, deletePost, getTags } from '@/lib/actions/posts';
+import {
+  updatePost,
+  publishPost,
+  republishPost,
+  deletePost,
+  getTags,
+  setGithubRepo,
+  type GithubRepoSnapshot,
+} from '@/lib/actions/posts';
+import { addAttachment, removeAttachment } from '@/lib/actions/attachments';
 import { TiptapEditor, type SavePayload } from '@/components/editor/TiptapEditor';
 import { PublishButton } from '@/components/editor/PublishButton';
 import { ShareDraftButton } from '@/components/editor/ShareDraftButton';
@@ -15,7 +24,7 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
 
   const post = await prisma.post.findUnique({
     where: { id, deletedAt: null },
-    include: { tags: true },
+    include: { tags: true, attachments: true },
   });
   if (!post || post.authorId !== author.id) notFound();
 
@@ -29,7 +38,28 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
       contentJson: JSON.parse(payload.contentJson) as object,
       wordCount: payload.wordCount,
       tags: payload.tags,
+      postType: payload.postType,
     });
+  }
+
+  async function setRepo(url: string): Promise<{ ok: true; repo: GithubRepoSnapshot | null }> {
+    'use server';
+    return setGithubRepo(id, url);
+  }
+
+  async function addFile(data: {
+    url: string;
+    filename: string;
+    mimeType: string;
+    sizeBytes: number;
+  }): Promise<{ ok: true; id: string }> {
+    'use server';
+    return addAttachment(id, data);
+  }
+
+  async function removeFile(attachmentId: string): Promise<{ ok: true }> {
+    'use server';
+    return removeAttachment(attachmentId);
   }
 
   async function publish() {
@@ -84,7 +114,24 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
           initialContent={content}
           initialTags={(post.tags ?? []).map((t) => t.name)}
           allTags={allTags.map((t) => t.name)}
+          initialPostType={post.postType}
+          initialGithubRepoUrl={post.githubRepoUrl ?? ''}
+          initialGithubRepo={
+            post.githubRepoData && typeof post.githubRepoData === 'object'
+              ? (post.githubRepoData as unknown as GithubRepoSnapshot)
+              : null
+          }
+          initialAttachments={post.attachments.map((a) => ({
+            id: a.id,
+            url: a.url,
+            filename: a.filename,
+            mimeType: a.mimeType,
+            sizeBytes: a.sizeBytes,
+          }))}
           onSave={save}
+          onSetGithubRepo={setRepo}
+          onAddAttachment={addFile}
+          onRemoveAttachment={removeFile}
         />
       </main>
     </div>

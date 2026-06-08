@@ -78,6 +78,6 @@ export async function getPublishedPosts({
 export async function getPostBySlug(slug: string) {
   return prisma.post.findUnique({
     where: { slug, deletedAt: null },
-    include: { author: true, tags: true },
+    include: { author: true, tags: true, attachments: true },
   });
 }
