@@ -22,6 +22,7 @@ type Props = {
     author: { name: string; avatar: string | null };
     publishedAt: Date | null;
     tags?: { id: string; name: string }[];
+    collection?: { name: string; slug: string } | null;
   };
   initialSaved?: boolean;
 };
@@ -35,6 +36,11 @@ export function PostCard({ post, initialSaved = false }: Props) {
         {/* Top row: badges + bookmark */}
         <div className="mb-3 flex items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-1">
+            {post.collection && (
+              <span className="rounded-badge bg-accent/10 text-accent px-2 py-1 text-xs font-semibold">
+                {post.collection.name}
+              </span>
+            )}
             {(post.tags ?? []).length > 0 ? (
               (post.tags ?? []).map((tag) => (
                 <span

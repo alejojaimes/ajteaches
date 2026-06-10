@@ -1,5 +1,7 @@
+import Link from 'next/link';
 import { getPublishedPosts } from '@/lib/db/posts';
 import { getSavedPostIds } from '@/lib/db/saves';
+import { getCollectionWithDescendantIds, getCollectionTree } from '@/lib/db/collections';
 import { getCurrentReader } from '@/lib/auth/get-current-reader';
 import { getServerDictionary } from '@/lib/i18n/get-locale';
 import { getFirstContentImage } from '@/lib/render-post';
@@ -8,9 +10,27 @@ import { NewsletterSection } from '@/components/blog/NewsletterSection';
 import { AnimatedHeroTitle } from '@/components/blog/AnimatedHeroTitle';
 import { Reveal } from '@/components/profile/Reveal';
 
-export default async function Home() {
+type PostType = 'blog' | 'tutorial';
+
+function isPostType(value: string | undefined): value is PostType {
+  return value === 'blog' || value === 'tutorial';
+}
+
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ type?: string; collection?: string }>;
+}) {
+  const { type: typeParam, collection: collectionParam } = await searchParams;
+  const type = isPostType(typeParam) ? typeParam : undefined;
+
+  const [collectionFilter, collectionTree] = await Promise.all([
+    collectionParam ? getCollectionWithDescendantIds(collectionParam) : null,
+    type === 'tutorial' ? getCollectionTree() : Promise.resolve([]),
+  ]);
+
   const [posts, reader, t] = await Promise.all([
-    getPublishedPosts({ limit: 10 }),
+    getPublishedPosts({ limit: 10, type, collectionIds: collectionFilter?.ids }),
     getCurrentReader(),
     getServerDictionary(),
   ]);
@@ -20,6 +40,8 @@ export default async function Home() {
         posts.map((post) => post.id)
       )
     : new Set<string>();
+
+  const topLevelCollections = collectionTree.filter((c) => c.parentId === null);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12">
@@ -35,6 +57,33 @@ export default async function Home() {
           <p className="text-muted-foreground mx-auto mt-4 max-w-xl text-sm">{t.hero.intro}</p>
         </Reveal>
       </section>
+      {topLevelCollections.length > 0 && (
+        <div className="mb-8 flex flex-wrap items-center justify-center gap-2">
+          <Link
+            href="/?type=tutorial"
+            className={`rounded-badge px-3 py-1 text-xs font-semibold transition-colors ${
+              !collectionFilter
+                ? 'bg-primary text-white'
+                : 'bg-primary-soft text-primary hover:bg-primary/20'
+            }`}
+          >
+            {t.hero.allCollections}
+          </Link>
+          {topLevelCollections.map((c) => (
+            <Link
+              key={c.id}
+              href={`/?type=tutorial&collection=${c.slug}`}
+              className={`rounded-badge px-3 py-1 text-xs font-semibold transition-colors ${
+                collectionFilter?.collection.id === c.id
+                  ? 'bg-primary text-white'
+                  : 'bg-primary-soft text-primary hover:bg-primary/20'
+              }`}
+            >
+              {c.name}
+            </Link>
+          ))}
+        </div>
+      )}
       <section className="grid grid-cols-1 gap-6 md:grid-cols-3">
         {posts.length === 0 ? (
           <p className="text-muted-foreground col-span-3 text-center">{t.hero.noPosts}</p>

@@ -62,22 +62,29 @@ export async function getOwnerPosts(
 export async function getPublishedPosts({
   limit = 10,
   type,
-}: { limit?: number; type?: 'blog' | 'tutorial' } = {}) {
+  collectionIds,
+}: { limit?: number; type?: 'blog' | 'tutorial'; collectionIds?: string[] } = {}) {
   return prisma.post.findMany({
     where: {
       status: 'published',
       deletedAt: null,
       ...(type ? { postType: type } : {}),
+      ...(collectionIds ? { collectionId: { in: collectionIds } } : {}),
     },
     orderBy: { publishedAt: 'desc' },
     take: limit,
-    include: { author: true, tags: true },
+    include: { author: true, tags: true, collection: true },
   });
 }
 
 export async function getPostBySlug(slug: string) {
   return prisma.post.findUnique({
     where: { slug, deletedAt: null },
-    include: { author: true, tags: true, attachments: true },
+    include: {
+      author: true,
+      tags: true,
+      attachments: true,
+      collection: { include: { parent: true } },
+    },
   });
 }
