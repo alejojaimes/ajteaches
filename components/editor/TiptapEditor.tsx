@@ -12,6 +12,7 @@ import { createLowlight, common } from 'lowlight';
 import type { Editor } from '@tiptap/core';
 import type { PostType } from '@prisma/client';
 import type { GithubRepoSnapshot } from '@/lib/actions/posts';
+import type { CollectionListItem } from '@/lib/actions/collections';
 import { EmbedNode } from '@/lib/extensions/embed';
 import { EmbedCardView } from '@/components/editor/EmbedCardView';
 import { CodeBlockView } from '@/components/editor/CodeBlockView';
@@ -57,6 +58,8 @@ type Props = {
   initialGithubRepoUrl?: string;
   initialGithubRepo?: GithubRepoSnapshot | null;
   initialAttachments?: AttachmentItem[];
+  collections?: CollectionListItem[];
+  initialCollectionId?: string | null;
   onSave?: (payload: SavePayload) => Promise<void>;
   onSetGithubRepo?: (url: string) => Promise<{ ok: true; repo: GithubRepoSnapshot | null }>;
   onAddAttachment?: (data: {
@@ -66,7 +69,40 @@ type Props = {
     sizeBytes: number;
   }) => Promise<{ ok: true; id: string }>;
   onRemoveAttachment?: (attachmentId: string) => Promise<{ ok: true }>;
+  onSetCollection?: (collectionId: string | null) => Promise<{ ok: true }>;
+  onCreateCollection?: (name: string, parentId: string | null) => Promise<CollectionListItem>;
+  onSearchPosts?: (query: string) => Promise<AuthorPostResult[]>;
 };
+
+export type AuthorPostResult = {
+  slug: string;
+  title: string;
+  coverImage: string | null;
+  publishedAt: Date | null;
+};
+
+type CollectionOption = { id: string; label: string; depth: number };
+
+function buildCollectionOptions(collections: CollectionListItem[]): CollectionOption[] {
+  const byParent = new Map<string | null, CollectionListItem[]>();
+  for (const c of collections) {
+    const key = c.parentId;
+    const list = byParent.get(key) ?? [];
+    list.push(c);
+    byParent.set(key, list);
+  }
+  for (const list of byParent.values()) list.sort((a, b) => a.name.localeCompare(b.name));
+
+  const options: CollectionOption[] = [];
+  function visit(parentId: string | null, depth: number) {
+    for (const c of byParent.get(parentId) ?? []) {
+      options.push({ id: c.id, label: `${'— '.repeat(depth)}${c.name}`, depth });
+      visit(c.id, depth + 1);
+    }
+  }
+  visit(null, 0);
+  return options;
+}
 
 export function TiptapEditor({
   postId,
@@ -79,10 +115,15 @@ export function TiptapEditor({
   initialGithubRepoUrl = '',
   initialGithubRepo = null,
   initialAttachments = [],
+  collections: initialCollections = [],
+  initialCollectionId = null,
   onSave,
   onSetGithubRepo,
   onAddAttachment,
   onRemoveAttachment,
+  onSetCollection,
+  onCreateCollection,
+  onSearchPosts,
 }: Props) {
   const [title, setTitle] = useState(initialTitle);
   const [excerpt, setExcerpt] = useState(initialExcerpt);
@@ -97,12 +138,23 @@ export function TiptapEditor({
   const [embedOpen, setEmbedOpen] = useState(false);
   const [embedUrl, setEmbedUrl] = useState('');
   const [embedLoading, setEmbedLoading] = useState(false);
+  const [linkPostOpen, setLinkPostOpen] = useState(false);
+  const [linkPostQuery, setLinkPostQuery] = useState('');
+  const [linkPostResults, setLinkPostResults] = useState<AuthorPostResult[]>([]);
+  const [linkPostLoading, setLinkPostLoading] = useState(false);
   const [githubRepoUrl, setGithubRepoUrl] = useState(initialGithubRepoUrl);
   const [githubRepo, setGithubRepoState] = useState<GithubRepoSnapshot | null>(initialGithubRepo);
   const [githubRepoLoading, setGithubRepoLoading] = useState(false);
   const [githubRepoError, setGithubRepoError] = useState('');
   const [attachments, setAttachments] = useState<AttachmentItem[]>(initialAttachments);
   const [attachmentUploading, setAttachmentUploading] = useState(false);
+  const [collections, setCollections] = useState<CollectionListItem[]>(initialCollections);
+  const [collectionId, setCollectionId] = useState<string | null>(initialCollectionId);
+  const [collectionSaving, setCollectionSaving] = useState(false);
+  const [newCollectionOpen, setNewCollectionOpen] = useState(false);
+  const [newCollectionName, setNewCollectionName] = useState('');
+  const [newCollectionParentId, setNewCollectionParentId] = useState('');
+  const [newCollectionError, setNewCollectionError] = useState('');
   const titleRef = useRef(title);
   const excerptRef = useRef(excerpt);
   const tagsRef = useRef(tags);
@@ -278,6 +330,44 @@ export function TiptapEditor({
     }
   };
 
+  const handleCollectionChange = async (value: string) => {
+    if (value === '__new__') {
+      setNewCollectionOpen(true);
+      return;
+    }
+    const next = value || null;
+    setCollectionId(next);
+    if (!onSetCollection) return;
+    setCollectionSaving(true);
+    try {
+      await onSetCollection(next);
+    } finally {
+      setCollectionSaving(false);
+    }
+  };
+
+  const handleCreateCollection = async () => {
+    if (!onCreateCollection || !newCollectionName.trim()) return;
+    setNewCollectionError('');
+    setCollectionSaving(true);
+    try {
+      const created = await onCreateCollection(
+        newCollectionName.trim(),
+        newCollectionParentId || null
+      );
+      setCollections((prev) => [...prev, created]);
+      setCollectionId(created.id);
+      if (onSetCollection) await onSetCollection(created.id);
+      setNewCollectionName('');
+      setNewCollectionParentId('');
+      setNewCollectionOpen(false);
+    } catch (err) {
+      setNewCollectionError(err instanceof Error ? err.message : 'Failed to create collection');
+    } finally {
+      setCollectionSaving(false);
+    }
+  };
+
   const handleRemoveAttachment = async (attachmentId: string) => {
     if (!onRemoveAttachment) return;
     try {
@@ -353,6 +443,37 @@ export function TiptapEditor({
     } finally {
       setEmbedLoading(false);
     }
+  };
+
+  const searchLinkPosts = async (query: string) => {
+    if (!onSearchPosts) return;
+    setLinkPostLoading(true);
+    try {
+      const results = await onSearchPosts(query);
+      setLinkPostResults(results);
+    } finally {
+      setLinkPostLoading(false);
+    }
+  };
+
+  const insertLinkPost = (post: AuthorPostResult) => {
+    if (!editor) return;
+    editor
+      .chain()
+      .focus()
+      .insertContent({
+        type: 'embedCard',
+        attrs: {
+          url: `/posts/${post.slug}`,
+          title: post.title,
+          description: post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : '',
+          image: post.coverImage ?? '',
+        },
+      })
+      .run();
+    setLinkPostOpen(false);
+    setLinkPostQuery('');
+    setLinkPostResults([]);
   };
 
   const handleImageUpload = async (file: File) => {
@@ -509,6 +630,77 @@ export function TiptapEditor({
       {postType === 'tutorial' && (
         <div className="border-border bg-card rounded-card mb-6 border p-4">
           <p className="text-foreground mb-3 text-sm font-medium">Tutorial settings</p>
+
+          <div className="mb-4">
+            <label className="text-muted-foreground mb-1 block text-xs">Collection</label>
+            <select
+              value={collectionId ?? ''}
+              onChange={(e) => void handleCollectionChange(e.target.value)}
+              disabled={collectionSaving}
+              className="border-border text-foreground focus:ring-primary w-full rounded-md border bg-transparent px-3 py-1.5 text-sm outline-none focus:ring-1 disabled:opacity-50"
+            >
+              <option value="">No collection</option>
+              {buildCollectionOptions(collections).map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.label}
+                </option>
+              ))}
+              <option value="__new__">+ New collection…</option>
+            </select>
+
+            {newCollectionOpen && (
+              <div className="border-border bg-background mt-2 rounded-md border p-3">
+                <label className="text-muted-foreground mb-1 block text-xs">Name</label>
+                <input
+                  type="text"
+                  value={newCollectionName}
+                  onChange={(e) => setNewCollectionName(e.target.value)}
+                  placeholder="e.g. AWS Glue"
+                  className="border-border text-foreground focus:ring-primary mb-2 w-full rounded-md border px-3 py-1.5 text-sm outline-none focus:ring-1"
+                />
+                <label className="text-muted-foreground mb-1 block text-xs">
+                  Parent collection (optional)
+                </label>
+                <select
+                  value={newCollectionParentId}
+                  onChange={(e) => setNewCollectionParentId(e.target.value)}
+                  className="border-border text-foreground focus:ring-primary mb-2 w-full rounded-md border bg-transparent px-3 py-1.5 text-sm outline-none focus:ring-1"
+                >
+                  <option value="">None (top-level)</option>
+                  {buildCollectionOptions(collections).map((opt) => (
+                    <option key={opt.id} value={opt.id}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                {newCollectionError && (
+                  <p className="text-destructive mb-2 text-xs">{newCollectionError}</p>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void handleCreateCollection()}
+                    disabled={collectionSaving || !newCollectionName.trim()}
+                    className="rounded-button bg-primary hover:bg-primary-hover px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+                  >
+                    Create
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewCollectionOpen(false);
+                      setNewCollectionName('');
+                      setNewCollectionParentId('');
+                      setNewCollectionError('');
+                    }}
+                    className="text-muted-foreground hover:text-foreground px-2 text-xs"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="mb-4">
             <label className="text-muted-foreground mb-1 block text-xs">GitHub repository</label>
@@ -670,6 +862,18 @@ export function TiptapEditor({
         >
           + Embed
         </button>
+        {onSearchPosts && (
+          <button
+            type="button"
+            onClick={() => {
+              setLinkPostOpen(true);
+              void searchLinkPosts('');
+            }}
+            className="text-muted-foreground hover:text-foreground text-xs"
+          >
+            + My posts
+          </button>
+        )}
       </div>
 
       {/* Mention dialog */}
@@ -758,6 +962,65 @@ export function TiptapEditor({
             <button
               type="button"
               onClick={() => setEmbedOpen(false)}
+              className="text-muted-foreground hover:text-foreground text-xs"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Link to my post dialog */}
+      {linkPostOpen && (
+        <div className="border-border bg-card rounded-card mt-3 border p-4 shadow-md">
+          <p className="text-foreground mb-3 text-sm font-medium">Link to one of my posts</p>
+          <input
+            type="text"
+            value={linkPostQuery}
+            onChange={(e) => {
+              const value = e.target.value;
+              setLinkPostQuery(value);
+              void searchLinkPosts(value);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setLinkPostOpen(false);
+            }}
+            placeholder="Search your posts…"
+            autoFocus
+            className="border-border text-foreground focus:ring-primary mb-3 w-full rounded-md border px-3 py-1.5 text-sm outline-none focus:ring-1"
+          />
+          {linkPostLoading ? (
+            <p className="text-muted-foreground text-xs">Loading…</p>
+          ) : linkPostResults.length > 0 ? (
+            <ul className="max-h-64 space-y-1 overflow-y-auto">
+              {linkPostResults.map((post) => (
+                <li key={post.slug}>
+                  <button
+                    type="button"
+                    onClick={() => insertLinkPost(post)}
+                    className="hover:bg-accent/10 flex w-full items-center gap-2 rounded-md p-1.5 text-left"
+                  >
+                    {post.coverImage ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={post.coverImage}
+                        alt=""
+                        className="h-10 w-14 shrink-0 rounded object-cover"
+                      />
+                    ) : (
+                      <div className="bg-primary-soft h-10 w-14 shrink-0 rounded" />
+                    )}
+                    <span className="text-foreground truncate text-sm">{post.title}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-muted-foreground text-xs">No posts found.</p>
+          )}
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setLinkPostOpen(false)}
               className="text-muted-foreground hover:text-foreground text-xs"
             >
               Cancel
