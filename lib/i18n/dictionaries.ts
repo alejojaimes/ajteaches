@@ -18,6 +18,7 @@ export type Dictionary = {
     subtitle: string;
     intro: string;
     noPosts: string;
+    allCollections: string;
   };
   newsletter: {
     title: string;
@@ -31,6 +32,9 @@ export type Dictionary = {
     title: string;
     description: string;
     signUp: string;
+  };
+  toc: {
+    title: string;
   };
 };
 
@@ -54,6 +58,7 @@ const es: Dictionary = {
     intro:
       'Tutoriales prácticos, notas de ingeniería real y proyectos paso a paso — directo a tu bandeja de entrada.',
     noPosts: 'Aún no hay publicaciones.',
+    allCollections: 'Todas',
   },
   newsletter: {
     title: 'Lleva tus habilidades de ingeniería al siguiente nivel',
@@ -69,6 +74,9 @@ const es: Dictionary = {
     description:
       'Crea una cuenta gratis para dar like, comentar y guardar publicaciones para después.',
     signUp: 'Registrarme',
+  },
+  toc: {
+    title: 'En esta página',
   },
 };
 
@@ -92,6 +100,7 @@ const en: Dictionary = {
     intro:
       'Practical tutorials, real engineering notes, and step-by-step projects — straight to your inbox.',
     noPosts: 'No posts yet.',
+    allCollections: 'All',
   },
   newsletter: {
     title: 'Level up your engineering skills',
@@ -106,6 +115,9 @@ const en: Dictionary = {
     title: 'Enjoying this post?',
     description: 'Create a free account to like, comment, and save posts for later.',
     signUp: 'Sign up',
+  },
+  toc: {
+    title: 'On this page',
   },
 };
 

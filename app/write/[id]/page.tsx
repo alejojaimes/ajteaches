@@ -9,10 +9,21 @@ import {
   deletePost,
   getTags,
   setGithubRepo,
+  searchAuthorPosts,
   type GithubRepoSnapshot,
 } from '@/lib/actions/posts';
 import { addAttachment, removeAttachment } from '@/lib/actions/attachments';
-import { TiptapEditor, type SavePayload } from '@/components/editor/TiptapEditor';
+import {
+  getCollections,
+  createCollection,
+  setPostCollection,
+  type CollectionListItem,
+} from '@/lib/actions/collections';
+import {
+  TiptapEditor,
+  type SavePayload,
+  type AuthorPostResult,
+} from '@/components/editor/TiptapEditor';
 import { PublishButton } from '@/components/editor/PublishButton';
 import { ShareDraftButton } from '@/components/editor/ShareDraftButton';
 import { DeletePostButton } from '@/components/editor/DeletePostButton';
@@ -29,6 +40,7 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
   if (!post || post.authorId !== author.id) notFound();
 
   const allTags = await getTags();
+  const collections = await getCollections();
 
   async function save(payload: SavePayload) {
     'use server';
@@ -60,6 +72,24 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
   async function removeFile(attachmentId: string): Promise<{ ok: true }> {
     'use server';
     return removeAttachment(attachmentId);
+  }
+
+  async function setCollection(collectionId: string | null): Promise<{ ok: true }> {
+    'use server';
+    return setPostCollection(id, collectionId);
+  }
+
+  async function createCollectionAction(
+    name: string,
+    parentId: string | null
+  ): Promise<CollectionListItem> {
+    'use server';
+    return createCollection(name, parentId);
+  }
+
+  async function searchPosts(query: string): Promise<AuthorPostResult[]> {
+    'use server';
+    return searchAuthorPosts(query);
   }
 
   async function publish() {
@@ -128,10 +158,15 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
             mimeType: a.mimeType,
             sizeBytes: a.sizeBytes,
           }))}
+          collections={collections}
+          initialCollectionId={post.collectionId}
           onSave={save}
           onSetGithubRepo={setRepo}
           onAddAttachment={addFile}
           onRemoveAttachment={removeFile}
+          onSetCollection={setCollection}
+          onCreateCollection={createCollectionAction}
+          onSearchPosts={searchPosts}
         />
       </main>
     </div>
