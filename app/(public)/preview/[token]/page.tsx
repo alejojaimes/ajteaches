@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db/client';
-import { renderPostHTML } from '@/lib/render-post';
+import { renderPostHTML, getFirstContentImage } from '@/lib/render-post';
 import { CodeCopyInit } from '@/components/blog/CodeCopyInit';
+import { CoverImage } from '@/components/blog/CoverImage';
 
 export default async function PreviewPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -34,15 +35,13 @@ export default async function PreviewPage({ params }: { params: Promise<{ token:
       </h1>
       <div className="text-muted-foreground mb-8 text-sm">{post.author.name}</div>
 
-      {post.coverImage && (
-        <div className="mb-8 overflow-hidden rounded-xl">
-          <img
-            src={post.coverImage}
-            alt={post.title}
-            className="h-64 w-full object-cover md:h-80"
-          />
-        </div>
-      )}
+      <div className="mb-8 overflow-hidden rounded-xl">
+        <CoverImage
+          src={post.coverImage ?? getFirstContentImage(post.contentJson)}
+          alt={post.title}
+          className="h-64 w-full object-cover md:h-80"
+        />
+      </div>
 
       {post.excerpt && <p className="text-muted-foreground mb-8 text-lg">{post.excerpt}</p>}
 

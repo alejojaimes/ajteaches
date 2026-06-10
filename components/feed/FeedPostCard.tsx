@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Eye, Clock } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { DeletePostButton } from '@/components/editor/DeletePostButton';
+import { CoverImage } from '@/components/blog/CoverImage';
 import { formatRelativeTime } from '@/lib/utils';
 import type { OwnerPostListItem } from '@/lib/db/posts';
 
@@ -77,14 +78,12 @@ export function FeedPostCard({ post, author, onDelete }: Props) {
           </div>
         </div>
 
-        {post.coverImage && (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
-            src={post.coverImage}
-            alt=""
-            className="h-20 w-28 flex-shrink-0 rounded-lg object-cover"
-          />
-        )}
+        <CoverImage
+          src={post.coverImage}
+          alt=""
+          compact
+          className="h-20 w-28 flex-shrink-0 rounded-lg object-cover"
+        />
       </div>
 
       <div className="mt-4 flex items-center gap-2">

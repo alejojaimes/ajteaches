@@ -5,8 +5,9 @@ import { getPostBySlug, getPublishedPosts } from '@/lib/db/posts';
 import { getPostComments } from '@/lib/db/comments';
 import { getLikeState } from '@/lib/actions/likes';
 import { getCurrentReader } from '@/lib/auth/get-current-reader';
-import { renderPostHTML, extractHeadings } from '@/lib/render-post';
+import { renderPostHTML, extractHeadings, getFirstContentImage } from '@/lib/render-post';
 import { TableOfContents } from '@/components/blog/TableOfContents';
+import { CoverImage } from '@/components/blog/CoverImage';
 import { getInitials } from '@/lib/utils';
 import { getServerDictionary } from '@/lib/i18n/get-locale';
 import type { GithubRepoSnapshot } from '@/lib/actions/posts';
@@ -119,15 +120,13 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
           </div>
         )}
 
-        {post.coverImage && (
-          <div className="mb-8 overflow-hidden rounded-xl">
-            <img
-              src={post.coverImage}
-              alt={post.title}
-              className="h-64 w-full object-cover md:h-80"
-            />
-          </div>
-        )}
+        <div className="mb-8 overflow-hidden rounded-xl">
+          <CoverImage
+            src={post.coverImage ?? getFirstContentImage(post.contentJson)}
+            alt={post.title}
+            className="h-64 w-full object-cover md:h-80"
+          />
+        </div>
 
         {post.excerpt && <p className="text-muted-foreground mb-8 text-lg">{post.excerpt}</p>}
 
