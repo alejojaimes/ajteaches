@@ -3,13 +3,14 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { SignOutButton } from '@clerk/nextjs';
-import { LayoutDashboard, BarChart3, MessageCircle, User, LogOut } from 'lucide-react';
+import { LayoutDashboard, BarChart3, MessageCircle, Users, User, LogOut } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 const NAV_ITEMS = [
   { href: '/feed', label: 'Feed', icon: LayoutDashboard },
   { href: '/stats', label: 'Stats', icon: BarChart3 },
   { href: '/comments', label: 'Comments', icon: MessageCircle },
+  { href: '/users', label: 'Users', icon: Users },
   { href: '/profile', label: 'Profile', icon: User },
 ];
 

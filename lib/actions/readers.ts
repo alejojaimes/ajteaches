@@ -3,7 +3,10 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { getCurrentReader } from '@/lib/auth/get-current-reader';
+import { getCurrentAuthor } from '@/lib/auth/get-current-author';
 import { prisma } from '@/lib/db/client';
+import { getResendClient, getFromEmail } from '@/lib/email/client';
+import { renderAdminMessageEmail } from '@/lib/email/templates/admin-message';
 
 export async function updateReaderProfile(payload: {
   name: string;
@@ -50,4 +53,52 @@ export async function setNewsletterOptIn(optIn: boolean): Promise<SetNewsletterO
   revalidatePath('/');
   revalidatePath('/account');
   return { optedIn: optIn };
+}
+
+const SEND_BATCH_SIZE = 100;
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
+
+export async function sendEmailToReaders(
+  readerIds: string[],
+  subject: string,
+  message: string
+): Promise<{ ok: true; sent: number } | { ok: false; error: string }> {
+  const author = await getCurrentAuthor();
+  if (!author) return { ok: false, error: 'Unauthorized' };
+
+  if (!subject.trim() || !message.trim()) {
+    return { ok: false, error: 'Subject and message are required' };
+  }
+
+  const resend = getResendClient();
+  if (!resend) return { ok: false, error: 'Email is not configured' };
+
+  const readers = await prisma.reader.findMany({
+    where: { id: { in: readerIds }, email: { not: null } },
+    select: { email: true },
+  });
+  if (readers.length === 0) return { ok: false, error: 'No recipients with an email address' };
+
+  const { html } = renderAdminMessageEmail({ subject, message, authorName: author.name });
+  const from = getFromEmail();
+
+  for (const batch of chunk(readers, SEND_BATCH_SIZE)) {
+    await resend.batch.send(
+      batch.map(({ email }) => ({
+        from,
+        to: email!,
+        subject,
+        html,
+      }))
+    );
+  }
+
+  return { ok: true, sent: readers.length };
 }
