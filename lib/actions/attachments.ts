@@ -3,6 +3,13 @@
 import { revalidatePath } from 'next/cache';
 import { getCurrentAuthor } from '@/lib/auth/get-current-author';
 import { prisma } from '@/lib/db/client';
+import { deleteCloudinaryAsset } from '@/lib/cloudinary';
+
+function resourceTypeForMime(mimeType: string): 'image' | 'video' | 'raw' {
+  if (mimeType.startsWith('image/')) return 'image';
+  if (mimeType.startsWith('video/')) return 'video';
+  return 'raw';
+}
 
 export async function addAttachment(
   postId: string,
@@ -40,6 +47,12 @@ export async function removeAttachment(attachmentId: string): Promise<{ ok: true
   if (!attachment || attachment.post.authorId !== author.id) throw new Error('Not found');
 
   await prisma.postAttachment.delete({ where: { id: attachmentId } });
+
+  await deleteCloudinaryAsset(attachment.url, resourceTypeForMime(attachment.mimeType)).catch(
+    (error: unknown) => {
+      console.error('Failed to delete attachment from Cloudinary', error);
+    }
+  );
 
   if (attachment.post.status === 'published') revalidatePath(`/posts/${attachment.post.slug}`);
 
