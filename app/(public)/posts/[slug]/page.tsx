@@ -5,7 +5,8 @@ import { getPostBySlug, getPublishedPosts } from '@/lib/db/posts';
 import { getPostComments } from '@/lib/db/comments';
 import { getLikeState } from '@/lib/actions/likes';
 import { getCurrentReader } from '@/lib/auth/get-current-reader';
-import { renderPostHTML } from '@/lib/render-post';
+import { renderPostHTML, extractHeadings } from '@/lib/render-post';
+import { TableOfContents } from '@/components/blog/TableOfContents';
 import { getInitials } from '@/lib/utils';
 import { getServerDictionary } from '@/lib/i18n/get-locale';
 import type { GithubRepoSnapshot } from '@/lib/actions/posts';
@@ -43,90 +44,121 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
     getServerDictionary(),
   ]);
 
+  const headings = extractHeadings(post.contentJson);
+
   return (
-    <article className="mx-auto max-w-[700px] px-4 py-12">
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <span className="rounded-badge bg-primary-soft text-primary px-2 py-1 text-xs font-semibold">
-          {post.postType === 'tutorial' ? 'Tutorial' : 'Blog'}
-        </span>
-        {(post.tags ?? []).map((tag) => (
-          <span
-            key={tag.id}
-            className="rounded-badge bg-primary-soft text-primary px-2 py-1 text-xs font-semibold"
-          >
-            {tag.name}
-          </span>
-        ))}
-        <span className="text-muted-foreground text-sm">
-          {readTime} min read · {post.publishedAt?.toLocaleDateString('en-US')}
-        </span>
-      </div>
-
-      <h1 className="text-foreground mb-4 text-4xl leading-tight font-bold">{post.title}</h1>
-      <div className="mb-8 flex items-center justify-between gap-2.5">
-        <div className="flex items-center gap-2.5">
-          <Avatar size="sm">
-            {post.author.avatar && <AvatarImage src={post.author.avatar} alt={post.author.name} />}
-            <AvatarFallback className="bg-primary text-[10px] font-bold text-white">
-              {getInitials(post.author.name)}
-            </AvatarFallback>
-          </Avatar>
-          <span className="text-muted-foreground text-sm">{post.author.name}</span>
-        </div>
-        <LikeButton postId={post.id} initialLiked={liked} initialCount={count} />
-      </div>
-
-      {!reader && (
-        <div className="border-border bg-card mb-8 flex flex-col items-start gap-3 rounded-xl border p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-foreground text-sm font-semibold">{t.ctaBanner.title}</p>
-            <p className="text-muted-foreground mt-1 text-sm">{t.ctaBanner.description}</p>
+    <div className="mx-auto max-w-[940px] px-4 py-12 lg:flex lg:items-start lg:gap-10">
+      <article className="mx-auto w-full max-w-[700px] lg:mx-0">
+        <TableOfContents headings={headings} title={t.toc.title} variant="mobile" />
+        {post.postType === 'tutorial' && post.collection && (
+          <div className="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs">
+            {post.collection.parent && (
+              <>
+                <Link
+                  href={`/?type=tutorial&collection=${post.collection.parent.slug}`}
+                  className="hover:text-foreground"
+                >
+                  {post.collection.parent.name}
+                </Link>
+                <span>/</span>
+              </>
+            )}
+            <Link
+              href={`/?type=tutorial&collection=${post.collection.slug}`}
+              className="hover:text-foreground"
+            >
+              {post.collection.name}
+            </Link>
           </div>
-          <Link
-            href={`/sign-up?redirect_url=${encodeURIComponent(`/posts/${post.slug}`)}`}
-            className="rounded-button bg-primary hover:bg-primary-hover shrink-0 px-5 py-2 text-sm font-medium text-white transition-colors"
-          >
-            {t.ctaBanner.signUp}
-          </Link>
+        )}
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="rounded-badge bg-primary-soft text-primary px-2 py-1 text-xs font-semibold">
+            {post.postType === 'tutorial' ? 'Tutorial' : 'Blog'}
+          </span>
+          {(post.tags ?? []).map((tag) => (
+            <span
+              key={tag.id}
+              className="rounded-badge bg-primary-soft text-primary px-2 py-1 text-xs font-semibold"
+            >
+              {tag.name}
+            </span>
+          ))}
+          <span className="text-muted-foreground text-sm">
+            {readTime} min read · {post.publishedAt?.toLocaleDateString('en-US')}
+          </span>
         </div>
-      )}
 
-      {post.coverImage && (
-        <div className="mb-8 overflow-hidden rounded-xl">
-          <img
-            src={post.coverImage}
-            alt={post.title}
-            className="h-64 w-full object-cover md:h-80"
+        <h1 className="text-foreground mb-4 text-4xl leading-tight font-bold">{post.title}</h1>
+        <div className="mb-8 flex items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2.5">
+            <Avatar size="sm">
+              {post.author.avatar && (
+                <AvatarImage src={post.author.avatar} alt={post.author.name} />
+              )}
+              <AvatarFallback className="bg-primary text-[10px] font-bold text-white">
+                {getInitials(post.author.name)}
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-muted-foreground text-sm">{post.author.name}</span>
+          </div>
+          <LikeButton postId={post.id} initialLiked={liked} initialCount={count} />
+        </div>
+
+        {!reader && (
+          <div className="border-border bg-card mb-8 flex flex-col items-start gap-3 rounded-xl border p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-foreground text-sm font-semibold">{t.ctaBanner.title}</p>
+              <p className="text-muted-foreground mt-1 text-sm">{t.ctaBanner.description}</p>
+            </div>
+            <Link
+              href={`/sign-up?redirect_url=${encodeURIComponent(`/posts/${post.slug}`)}`}
+              className="rounded-button bg-primary hover:bg-primary-hover shrink-0 px-5 py-2 text-sm font-medium text-white transition-colors"
+            >
+              {t.ctaBanner.signUp}
+            </Link>
+          </div>
+        )}
+
+        {post.coverImage && (
+          <div className="mb-8 overflow-hidden rounded-xl">
+            <img
+              src={post.coverImage}
+              alt={post.title}
+              className="h-64 w-full object-cover md:h-80"
+            />
+          </div>
+        )}
+
+        {post.excerpt && <p className="text-muted-foreground mb-8 text-lg">{post.excerpt}</p>}
+
+        {githubRepo && post.githubRepoUrl && (
+          <GithubRepoCard url={post.githubRepoUrl} repo={githubRepo} />
+        )}
+
+        {post.postType === 'tutorial' && <AttachmentList attachments={post.attachments} />}
+
+        {post.contentJson &&
+        typeof post.contentJson === 'object' &&
+        !Array.isArray(post.contentJson) ? (
+          <div
+            className="tiptap-editor"
+            dangerouslySetInnerHTML={{ __html: renderPostHTML(post.contentJson as object) }}
           />
-        </div>
-      )}
+        ) : null}
 
-      {post.excerpt && <p className="text-muted-foreground mb-8 text-lg">{post.excerpt}</p>}
+        <CodeCopyInit />
+        <ReadingTracker postId={post.id} />
 
-      {githubRepo && post.githubRepoUrl && (
-        <GithubRepoCard url={post.githubRepoUrl} repo={githubRepo} />
-      )}
-
-      {post.postType === 'tutorial' && <AttachmentList attachments={post.attachments} />}
-
-      {post.contentJson &&
-      typeof post.contentJson === 'object' &&
-      !Array.isArray(post.contentJson) ? (
-        <div
-          className="tiptap-editor"
-          dangerouslySetInnerHTML={{ __html: renderPostHTML(post.contentJson as object) }}
+        <CommentSection
+          postId={post.id}
+          slug={post.slug}
+          initialComments={comments}
+          isSignedIn={!!reader}
         />
-      ) : null}
-
-      <CodeCopyInit />
-      <ReadingTracker postId={post.id} />
-
-      <CommentSection
-        postId={post.id}
-        slug={post.slug}
-        initialComments={comments}
-        isSignedIn={!!reader}
-      />
-    </article>
+      </article>
+      <aside className="hidden w-48 shrink-0 lg:block">
+        <TableOfContents headings={headings} title={t.toc.title} />
+      </aside>
+    </div>
   );
 }

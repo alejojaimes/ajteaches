@@ -10,6 +10,50 @@ type TiptapNode = {
   text?: string;
 };
 
+export type Heading = { id: string; text: string; level: number };
+
+const TOC_LEVELS = [2, 3];
+
+function slugifyHeading(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
+
+function getNodeText(node: TiptapNode): string {
+  if (node.type === 'text') return node.text ?? '';
+  return (node.content ?? []).map(getNodeText).join('');
+}
+
+export function extractHeadings(contentJson: unknown): Heading[] {
+  if (!contentJson || typeof contentJson !== 'object' || Array.isArray(contentJson)) return [];
+
+  const headings: Heading[] = [];
+  const slugCounts = new Map<string, number>();
+
+  function visit(node: TiptapNode): void {
+    if (node.type === 'heading') {
+      const level = Number(node.attrs?.level ?? 1);
+      if (TOC_LEVELS.includes(level)) {
+        const text = getNodeText(node).trim();
+        if (text) {
+          const base = slugifyHeading(text) || 'section';
+          const count = slugCounts.get(base) ?? 0;
+          slugCounts.set(base, count + 1);
+          headings.push({ id: count === 0 ? base : `${base}-${count}`, text, level });
+        }
+      }
+    }
+    for (const child of node.content ?? []) visit(child);
+  }
+
+  visit(contentJson as TiptapNode);
+  return headings;
+}
+
 export function getFirstContentImage(contentJson: unknown): string | null {
   if (!contentJson || typeof contentJson !== 'object' || Array.isArray(contentJson)) return null;
 
@@ -101,8 +145,10 @@ function renderText(
   return html;
 }
 
-function renderNodes(nodes: TiptapNode[]): string {
-  return nodes.map(renderNode).join('');
+type RenderContext = { headings: Heading[]; index: number };
+
+function renderNodes(nodes: TiptapNode[], ctx: RenderContext): string {
+  return nodes.map((node) => renderNode(node, ctx)).join('');
 }
 
 function renderEmbedCard(attrs: Record<string, unknown>): string {
@@ -121,8 +167,8 @@ function renderEmbedCard(attrs: Record<string, unknown>): string {
   return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="embed-card">${imgHtml}<div class="embed-card-body">${titleHtml}${descHtml}${urlHtml}</div></a>`;
 }
 
-function renderNode(node: TiptapNode): string {
-  const children = () => renderNodes(node.content ?? []);
+function renderNode(node: TiptapNode, ctx: RenderContext): string {
+  const children = () => renderNodes(node.content ?? [], ctx);
 
   switch (node.type) {
     case 'doc':
@@ -137,7 +183,9 @@ function renderNode(node: TiptapNode): string {
       return `<p>${children()}</p>`;
     case 'heading': {
       const level = Number(node.attrs?.level ?? 1);
-      return `<h${level}>${children()}</h${level}>`;
+      const heading = TOC_LEVELS.includes(level) ? ctx.headings[ctx.index++] : undefined;
+      const idAttr = heading ? ` id="${esc(heading.id)}"` : '';
+      return `<h${level}${idAttr}>${children()}</h${level}>`;
     }
     case 'bulletList':
       return `<ul>${children()}</ul>`;
@@ -148,7 +196,7 @@ function renderNode(node: TiptapNode): string {
       const first = items[0];
       const inner =
         items.length === 1 && first?.type === 'paragraph'
-          ? renderNodes(first.content ?? [])
+          ? renderNodes(first.content ?? [], ctx)
           : children();
       return `<li>${inner}</li>`;
     }
@@ -180,5 +228,6 @@ function renderNode(node: TiptapNode): string {
 }
 
 export function renderPostHTML(json: object): string {
-  return renderNode(json as TiptapNode);
+  const ctx: RenderContext = { headings: extractHeadings(json), index: 0 };
+  return renderNode(json as TiptapNode, ctx);
 }
