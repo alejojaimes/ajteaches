@@ -7,6 +7,7 @@ import { getCurrentAuthor } from '@/lib/auth/get-current-author';
 import { prisma } from '@/lib/db/client';
 import { notifyReadersOnPostPublished } from '@/lib/email/notify';
 import { getFirstContentImage } from '@/lib/render-post';
+import { deletePostMedia } from '@/lib/cloudinary';
 
 const GITHUB_REPO_URL_RE = /^https?:\/\/github\.com\/([^/\s#?]+)\/([^/\s#?]+?)(?:\.git)?\/?$/i;
 
@@ -251,6 +252,10 @@ export async function deletePost(postId: string): Promise<never> {
   await prisma.post.update({
     where: { id: postId },
     data: { deletedAt: new Date() },
+  });
+
+  await deletePostMedia(postId).catch((error: unknown) => {
+    console.error('Failed to delete post media from Cloudinary', error);
   });
 
   revalidatePath('/feed');

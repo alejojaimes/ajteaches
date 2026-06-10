@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getInitials } from '@/lib/utils';
 import { BookmarkButton } from './BookmarkButton';
+import { CoverImage } from './CoverImage';
 
 const cardDateFormatter = new Intl.DateTimeFormat('en-US', {
   day: '2-digit',
@@ -68,14 +69,12 @@ export function PostCard({ post, initialSaved = false }: Props) {
             )}
           </div>
 
-          {post.coverImage && (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src={post.coverImage}
-              alt=""
-              className="h-[60px] w-20 flex-shrink-0 rounded-md object-cover"
-            />
-          )}
+          <CoverImage
+            src={post.coverImage}
+            alt=""
+            compact
+            className="h-[60px] w-20 flex-shrink-0 rounded-md object-cover"
+          />
         </div>
 
         {/* Bottom row: author avatar + name, formatted date, read time */}
