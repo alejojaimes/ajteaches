@@ -125,6 +125,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
             src={post.coverImage ?? getFirstContentImage(post.contentJson)}
             alt={post.title}
             className="h-64 w-full object-cover md:h-80"
+            position={post.coverImagePosition}
           />
         </div>
 

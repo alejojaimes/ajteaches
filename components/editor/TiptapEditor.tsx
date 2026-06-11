@@ -13,6 +13,7 @@ import type { Editor } from '@tiptap/core';
 import type { PostType } from '@prisma/client';
 import type { GithubRepoSnapshot } from '@/lib/actions/posts';
 import type { CollectionListItem } from '@/lib/actions/collections';
+import { compressImageFile } from '@/lib/image-compress';
 import { EmbedNode } from '@/lib/extensions/embed';
 import { EmbedCardView } from '@/components/editor/EmbedCardView';
 import { CodeBlockView } from '@/components/editor/CodeBlockView';
@@ -61,7 +62,9 @@ type Props = {
   collections?: CollectionListItem[];
   initialCollectionId?: string | null;
   initialCoverImage?: string | null;
+  initialCoverImagePosition?: string | null;
   onSetCoverImage?: (url: string | null) => Promise<{ ok: true }>;
+  onSetCoverImagePosition?: (position: string) => Promise<{ ok: true }>;
   onSave?: (payload: SavePayload) => Promise<void>;
   onSetGithubRepo?: (url: string) => Promise<{ ok: true; repo: GithubRepoSnapshot | null }>;
   onAddAttachment?: (data: {
@@ -120,7 +123,9 @@ export function TiptapEditor({
   collections: initialCollections = [],
   initialCollectionId = null,
   initialCoverImage = null,
+  initialCoverImagePosition = null,
   onSetCoverImage,
+  onSetCoverImagePosition,
   onSave,
   onSetGithubRepo,
   onAddAttachment,
@@ -160,7 +165,13 @@ export function TiptapEditor({
   const [newCollectionParentId, setNewCollectionParentId] = useState('');
   const [newCollectionError, setNewCollectionError] = useState('');
   const [coverImage, setCoverImage] = useState<string | null>(initialCoverImage);
+  const [coverImagePosition, setCoverImagePosition] = useState<string | null>(
+    initialCoverImagePosition
+  );
   const [coverUploading, setCoverUploading] = useState(false);
+  const [repositioning, setRepositioning] = useState(false);
+  const [draftPosition, setDraftPosition] = useState('50% 50%');
+  const [savingPosition, setSavingPosition] = useState(false);
   const titleRef = useRef(title);
   const excerptRef = useRef(excerpt);
   const tagsRef = useRef(tags);
@@ -487,8 +498,9 @@ export function TiptapEditor({
     if (!editor || uploading) return;
     setUploading(true);
     try {
+      const compressed = await compressImageFile(file);
       const form = new FormData();
-      form.append('file', file);
+      form.append('file', compressed);
       form.append('postId', postId);
       const res = await fetch('/api/upload', { method: 'POST', body: form });
       if (!res.ok) throw new Error('Upload failed');
@@ -505,14 +517,16 @@ export function TiptapEditor({
     if (coverUploading) return;
     setCoverUploading(true);
     try {
+      const compressed = await compressImageFile(file);
       const form = new FormData();
-      form.append('file', file);
+      form.append('file', compressed);
       form.append('postId', postId);
       const res = await fetch('/api/upload', { method: 'POST', body: form });
       if (!res.ok) throw new Error('Upload failed');
       const { url } = (await res.json()) as { url: string };
       await onSetCoverImage?.(url);
       setCoverImage(url);
+      setCoverImagePosition(null);
     } catch {
       // silent — cover image stays unchanged
     } finally {
@@ -526,8 +540,33 @@ export function TiptapEditor({
     try {
       await onSetCoverImage?.(null);
       setCoverImage(null);
+      setCoverImagePosition(null);
     } finally {
       setCoverUploading(false);
+    }
+  };
+
+  const handleStartReposition = () => {
+    setDraftPosition(coverImagePosition ?? '50% 50%');
+    setRepositioning(true);
+  };
+
+  const handleRepositionPointer = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.buttons === 0 && e.type === 'pointermove') return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = Math.round(Math.min(100, Math.max(0, ((e.clientX - rect.left) / rect.width) * 100)));
+    const y = Math.round(Math.min(100, Math.max(0, ((e.clientY - rect.top) / rect.height) * 100)));
+    setDraftPosition(`${x}% ${y}%`);
+  };
+
+  const handleSavePosition = async () => {
+    setSavingPosition(true);
+    try {
+      await onSetCoverImagePosition?.(draftPosition);
+      setCoverImagePosition(draftPosition);
+      setRepositioning(false);
+    } finally {
+      setSavingPosition(false);
     }
   };
 
@@ -577,11 +616,65 @@ export function TiptapEditor({
       </div>
 
       <div className="mb-6">
-        {coverImage ? (
+        {coverImage && repositioning ? (
+          <div>
+            <div
+              className="border-border relative h-56 w-full cursor-crosshair overflow-hidden rounded-xl border bg-black"
+              onPointerDown={handleRepositionPointer}
+              onPointerMove={handleRepositionPointer}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={coverImage}
+                alt=""
+                className="pointer-events-none h-full w-full object-contain opacity-60"
+              />
+              <div
+                className="border-primary bg-primary/40 pointer-events-none absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2"
+                style={{ left: draftPosition.split(' ')[0], top: draftPosition.split(' ')[1] }}
+              />
+            </div>
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <p className="text-muted-foreground text-xs">
+                Click or drag to set the focal point of the image.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRepositioning(false)}
+                  disabled={savingPosition}
+                  className="rounded-button border-border text-muted-foreground hover:text-foreground border px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleSavePosition()}
+                  disabled={savingPosition}
+                  className="rounded-button bg-primary px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+                >
+                  {savingPosition ? 'Saving…' : 'Save position'}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : coverImage ? (
           <div className="group border-border relative overflow-hidden rounded-xl border">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={coverImage} alt="" className="h-56 w-full object-cover" />
+            <img
+              src={coverImage}
+              alt=""
+              className="h-56 w-full object-cover"
+              style={{ objectPosition: coverImagePosition ?? '50% 50%' }}
+            />
             <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+              <button
+                type="button"
+                onClick={handleStartReposition}
+                className="rounded-button bg-card text-foreground px-3 py-1.5 text-xs font-medium"
+              >
+                Reposition
+              </button>
               <label
                 htmlFor={coverInputId}
                 className="rounded-button bg-card text-foreground cursor-pointer px-3 py-1.5 text-xs font-medium"

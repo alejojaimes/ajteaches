@@ -45,6 +45,7 @@ export default async function PreviewPage({ params }: { params: Promise<{ token:
             src={post.coverImage ?? getFirstContentImage(post.contentJson)}
             alt={post.title}
             className="h-64 w-full object-cover md:h-80"
+            position={post.coverImagePosition}
           />
         </div>
 
