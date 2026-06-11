@@ -6,7 +6,7 @@ import { Prisma, type PostType } from '@prisma/client';
 import { getCurrentAuthor } from '@/lib/auth/get-current-author';
 import { prisma } from '@/lib/db/client';
 import { notifyReadersOnPostPublished } from '@/lib/email/notify';
-import { getFirstContentImage } from '@/lib/render-post';
+import { getFirstContentImage, extractContentImageUrls } from '@/lib/render-post';
 import { deletePostMedia, deleteCloudinaryAsset } from '@/lib/cloudinary';
 
 const GITHUB_REPO_URL_RE = /^https?:\/\/github\.com\/([^/\s#?]+)\/([^/\s#?]+?)(?:\.git)?\/?$/i;
@@ -104,6 +104,21 @@ export async function updatePost(
     revalidatePath('/');
     revalidatePath(`/posts/${slug}`);
   }
+
+  const assetPrefix = `/ajteaches/posts/${postId}/`;
+  const oldImages = extractContentImageUrls(post.contentJson).filter((url) =>
+    url.includes(assetPrefix)
+  );
+  const newImages = new Set(extractContentImageUrls(payload.contentJson));
+  const removedImages = oldImages.filter((url) => !newImages.has(url));
+
+  await Promise.all(
+    removedImages.map((url) =>
+      deleteCloudinaryAsset(url).catch((error: unknown) => {
+        console.error('Failed to delete removed content image from Cloudinary', error);
+      })
+    )
+  );
 
   return { ok: true };
 }
