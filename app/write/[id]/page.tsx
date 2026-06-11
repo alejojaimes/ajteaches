@@ -9,6 +9,7 @@ import {
   deletePost,
   getTags,
   setGithubRepo,
+  setCoverImage,
   searchAuthorPosts,
   type GithubRepoSnapshot,
 } from '@/lib/actions/posts';
@@ -57,6 +58,11 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
   async function setRepo(url: string): Promise<{ ok: true; repo: GithubRepoSnapshot | null }> {
     'use server';
     return setGithubRepo(id, url);
+  }
+
+  async function setCover(url: string | null): Promise<{ ok: true }> {
+    'use server';
+    return setCoverImage(id, url);
   }
 
   async function addFile(data: {
@@ -160,7 +166,9 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
           }))}
           collections={collections}
           initialCollectionId={post.collectionId}
+          initialCoverImage={post.coverImage}
           onSave={save}
+          onSetCoverImage={setCover}
           onSetGithubRepo={setRepo}
           onAddAttachment={addFile}
           onRemoveAttachment={removeFile}

@@ -37,7 +37,7 @@ function useActiveHeading(headings: Heading[]): string | null {
 export function TableOfContents({ headings, title, variant = 'sidebar' }: Props) {
   const activeId = useActiveHeading(headings);
 
-  if (headings.length < 2) return null;
+  if (headings.length === 0) return null;
 
   const list = (
     <ul className="space-y-1.5 text-sm">

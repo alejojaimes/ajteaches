@@ -7,7 +7,7 @@ import { getCurrentAuthor } from '@/lib/auth/get-current-author';
 import { prisma } from '@/lib/db/client';
 import { notifyReadersOnPostPublished } from '@/lib/email/notify';
 import { getFirstContentImage } from '@/lib/render-post';
-import { deletePostMedia } from '@/lib/cloudinary';
+import { deletePostMedia, deleteCloudinaryAsset } from '@/lib/cloudinary';
 
 const GITHUB_REPO_URL_RE = /^https?:\/\/github\.com\/([^/\s#?]+)\/([^/\s#?]+?)(?:\.git)?\/?$/i;
 
@@ -103,6 +103,29 @@ export async function updatePost(
   if (post.status === 'published') {
     revalidatePath('/');
     revalidatePath(`/posts/${slug}`);
+  }
+
+  return { ok: true };
+}
+
+export async function setCoverImage(postId: string, url: string | null): Promise<{ ok: true }> {
+  const author = await getCurrentAuthor();
+  if (!author) throw new Error('Unauthorized');
+
+  const post = await prisma.post.findUnique({ where: { id: postId } });
+  if (!post || post.authorId !== author.id) throw new Error('Not found');
+
+  if (post.coverImage && post.coverImage !== url) {
+    await deleteCloudinaryAsset(post.coverImage).catch((error: unknown) => {
+      console.error('Failed to delete previous cover image from Cloudinary', error);
+    });
+  }
+
+  await prisma.post.update({ where: { id: postId }, data: { coverImage: url } });
+
+  if (post.status === 'published') {
+    revalidatePath('/');
+    revalidatePath(`/posts/${post.slug}`);
   }
 
   return { ok: true };
