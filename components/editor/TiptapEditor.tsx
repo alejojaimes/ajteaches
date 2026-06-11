@@ -60,6 +60,8 @@ type Props = {
   initialAttachments?: AttachmentItem[];
   collections?: CollectionListItem[];
   initialCollectionId?: string | null;
+  initialCoverImage?: string | null;
+  onSetCoverImage?: (url: string | null) => Promise<{ ok: true }>;
   onSave?: (payload: SavePayload) => Promise<void>;
   onSetGithubRepo?: (url: string) => Promise<{ ok: true; repo: GithubRepoSnapshot | null }>;
   onAddAttachment?: (data: {
@@ -117,6 +119,8 @@ export function TiptapEditor({
   initialAttachments = [],
   collections: initialCollections = [],
   initialCollectionId = null,
+  initialCoverImage = null,
+  onSetCoverImage,
   onSave,
   onSetGithubRepo,
   onAddAttachment,
@@ -155,6 +159,8 @@ export function TiptapEditor({
   const [newCollectionName, setNewCollectionName] = useState('');
   const [newCollectionParentId, setNewCollectionParentId] = useState('');
   const [newCollectionError, setNewCollectionError] = useState('');
+  const [coverImage, setCoverImage] = useState<string | null>(initialCoverImage);
+  const [coverUploading, setCoverUploading] = useState(false);
   const titleRef = useRef(title);
   const excerptRef = useRef(excerpt);
   const tagsRef = useRef(tags);
@@ -162,6 +168,7 @@ export function TiptapEditor({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputId = useId();
   const attachmentInputId = useId();
+  const coverInputId = useId();
   const mentionNameId = useId();
 
   useEffect(() => {
@@ -494,6 +501,36 @@ export function TiptapEditor({
     }
   };
 
+  const handleCoverImageUpload = async (file: File) => {
+    if (coverUploading) return;
+    setCoverUploading(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('postId', postId);
+      const res = await fetch('/api/upload', { method: 'POST', body: form });
+      if (!res.ok) throw new Error('Upload failed');
+      const { url } = (await res.json()) as { url: string };
+      await onSetCoverImage?.(url);
+      setCoverImage(url);
+    } catch {
+      // silent — cover image stays unchanged
+    } finally {
+      setCoverUploading(false);
+    }
+  };
+
+  const handleRemoveCoverImage = async () => {
+    if (coverUploading) return;
+    setCoverUploading(true);
+    try {
+      await onSetCoverImage?.(null);
+      setCoverImage(null);
+    } finally {
+      setCoverUploading(false);
+    }
+  };
+
   const statusNode = (() => {
     if (saveStatus === 'saving') {
       return <span className="text-muted-foreground text-sm">Saving...</span>;
@@ -537,6 +574,49 @@ export function TiptapEditor({
         <span className="text-muted-foreground text-xs">
           {wordCount} words · {readTime} min read
         </span>
+      </div>
+
+      <div className="mb-6">
+        {coverImage ? (
+          <div className="group border-border relative overflow-hidden rounded-xl border">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={coverImage} alt="" className="h-56 w-full object-cover" />
+            <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+              <label
+                htmlFor={coverInputId}
+                className="rounded-button bg-card text-foreground cursor-pointer px-3 py-1.5 text-xs font-medium"
+              >
+                {coverUploading ? 'Uploading…' : 'Replace'}
+              </label>
+              <button
+                type="button"
+                onClick={() => void handleRemoveCoverImage()}
+                disabled={coverUploading}
+                className="rounded-button bg-card text-destructive px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        ) : (
+          <label
+            htmlFor={coverInputId}
+            className="border-border text-muted-foreground hover:border-primary hover:text-primary flex h-32 w-full cursor-pointer items-center justify-center rounded-xl border border-dashed text-sm transition-colors"
+          >
+            {coverUploading ? 'Uploading…' : '+ Add cover image'}
+          </label>
+        )}
+        <input
+          id={coverInputId}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void handleCoverImageUpload(file);
+            e.target.value = '';
+          }}
+        />
       </div>
 
       <textarea
