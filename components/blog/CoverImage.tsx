@@ -3,12 +3,20 @@ type Props = {
   alt: string;
   className?: string;
   compact?: boolean;
+  position?: string | null;
 };
 
-export function CoverImage({ src, alt, className = '', compact = false }: Props) {
+export function CoverImage({ src, alt, className = '', compact = false, position }: Props) {
   if (src) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={src} alt={alt} className={className} />;
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={src}
+        alt={alt}
+        className={className}
+        style={position ? { objectPosition: position } : undefined}
+      />
+    );
   }
 
   return (

@@ -121,7 +121,34 @@ export async function setCoverImage(postId: string, url: string | null): Promise
     });
   }
 
-  await prisma.post.update({ where: { id: postId }, data: { coverImage: url } });
+  await prisma.post.update({
+    where: { id: postId },
+    data: { coverImage: url, coverImagePosition: null },
+  });
+
+  if (post.status === 'published') {
+    revalidatePath('/');
+    revalidatePath(`/posts/${post.slug}`);
+  }
+
+  return { ok: true };
+}
+
+const COVER_POSITION_RE = /^\d{1,3}% \d{1,3}%$/;
+
+export async function setCoverImagePosition(
+  postId: string,
+  position: string
+): Promise<{ ok: true }> {
+  const author = await getCurrentAuthor();
+  if (!author) throw new Error('Unauthorized');
+
+  if (!COVER_POSITION_RE.test(position)) throw new Error('Invalid position');
+
+  const post = await prisma.post.findUnique({ where: { id: postId } });
+  if (!post || post.authorId !== author.id) throw new Error('Not found');
+
+  await prisma.post.update({ where: { id: postId }, data: { coverImagePosition: position } });
 
   if (post.status === 'published') {
     revalidatePath('/');
