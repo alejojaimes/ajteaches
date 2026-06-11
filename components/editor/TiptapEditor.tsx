@@ -147,6 +147,8 @@ export function TiptapEditor({
   const [embedOpen, setEmbedOpen] = useState(false);
   const [embedUrl, setEmbedUrl] = useState('');
   const [embedLoading, setEmbedLoading] = useState(false);
+  const [imageDialogOpen, setImageDialogOpen] = useState(false);
+  const [imageUrlInput, setImageUrlInput] = useState('');
   const [linkPostOpen, setLinkPostOpen] = useState(false);
   const [linkPostQuery, setLinkPostQuery] = useState('');
   const [linkPostResults, setLinkPostResults] = useState<AuthorPostResult[]>([]);
@@ -511,6 +513,13 @@ export function TiptapEditor({
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleInsertImageUrl = () => {
+    if (!editor || !imageUrlInput.trim()) return;
+    editor.chain().focus().setImage({ src: imageUrlInput.trim() }).run();
+    setImageUrlInput('');
+    setImageDialogOpen(false);
   };
 
   const handleCoverImageUpload = async (file: File) => {
@@ -995,7 +1004,7 @@ export function TiptapEditor({
       {editor && (
         <SlashMenu
           editor={editor}
-          onImageClick={() => document.getElementById(fileInputId)?.click()}
+          onImageClick={() => setImageDialogOpen(true)}
           onEmbedClick={() => setEmbedOpen(true)}
         />
       )}
@@ -1011,16 +1020,19 @@ export function TiptapEditor({
           const file = e.target.files?.[0];
           if (file) void handleImageUpload(file);
           e.target.value = '';
+          setImageDialogOpen(false);
         }}
       />
 
       <div className="border-border mt-6 flex items-center gap-3 border-t pt-4">
-        <label
-          htmlFor={fileInputId}
-          className={`text-muted-foreground hover:text-foreground cursor-pointer text-xs ${uploading ? 'opacity-50' : ''}`}
+        <button
+          type="button"
+          onClick={() => setImageDialogOpen(true)}
+          disabled={uploading}
+          className="text-muted-foreground hover:text-foreground text-xs disabled:opacity-50"
         >
           {uploading ? 'Uploading…' : '+ Image'}
-        </label>
+        </button>
         <button
           type="button"
           onClick={() => setMentionOpen(true)}
@@ -1135,6 +1147,53 @@ export function TiptapEditor({
             <button
               type="button"
               onClick={() => setEmbedOpen(false)}
+              className="text-muted-foreground hover:text-foreground text-xs"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Image dialog */}
+      {imageDialogOpen && (
+        <div className="border-border bg-card rounded-card mt-3 border p-4 shadow-md">
+          <p className="text-foreground mb-3 text-sm font-medium">Add image</p>
+          <div className="mb-3 flex items-center gap-2">
+            <label
+              htmlFor={fileInputId}
+              className={`rounded-button border-border text-foreground hover:bg-primary-soft/50 cursor-pointer border px-3 py-1.5 text-xs font-medium ${uploading ? 'opacity-50' : ''}`}
+            >
+              {uploading ? 'Uploading…' : 'Upload from device'}
+            </label>
+            <span className="text-muted-foreground text-xs">or paste a link below</span>
+          </div>
+          <input
+            type="url"
+            value={imageUrlInput}
+            onChange={(e) => setImageUrlInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleInsertImageUrl();
+              if (e.key === 'Escape') setImageDialogOpen(false);
+            }}
+            placeholder="https://example.com/image.jpg"
+            autoFocus
+            className="border-border text-foreground focus:ring-primary mb-3 w-full rounded-md border px-3 py-1.5 text-sm outline-none focus:ring-1"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleInsertImageUrl}
+              disabled={!imageUrlInput.trim()}
+              className="rounded-button bg-primary hover:bg-primary-hover px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+            >
+              Insert
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setImageDialogOpen(false);
+                setImageUrlInput('');
+              }}
               className="text-muted-foreground hover:text-foreground text-xs"
             >
               Cancel
