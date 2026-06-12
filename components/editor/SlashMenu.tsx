@@ -61,6 +61,12 @@ export function SlashMenu({ editor, onImageClick, onEmbedClick }: Props) {
       action: () => editor.chain().focus().setHorizontalRule().run(),
     },
     {
+      label: '▦',
+      description: 'Table',
+      action: () =>
+        editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+    },
+    {
       label: '🖼',
       description: 'Image',
       action: () => {

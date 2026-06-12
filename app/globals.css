@@ -410,6 +410,55 @@
   padding: 0 2px;
 }
 
+.tiptap-editor .table-wrapper,
+.tiptap-editor .tableWrapper {
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+.tiptap-editor table {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.tiptap-editor th,
+.tiptap-editor td {
+  border: 1px solid var(--border);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+  position: relative;
+}
+
+.tiptap-editor th {
+  background: var(--primary-soft);
+  font-weight: 600;
+}
+
+.tiptap-editor th p,
+.tiptap-editor td p {
+  margin-bottom: 0;
+}
+
+.tiptap-editor .selectedCell {
+  background: var(--primary-soft);
+}
+
+.tiptap-editor .column-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  bottom: 0;
+  width: 4px;
+  background-color: var(--primary);
+  pointer-events: none;
+}
+
+.tiptap-editor.resize-cursor {
+  cursor: col-resize;
+}
+
 .tiptap-editor p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   color: var(--muted-foreground);
