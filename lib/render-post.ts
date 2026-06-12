@@ -249,8 +249,10 @@ function renderNode(node: TiptapNode, ctx: RenderContext): string {
       const src = esc(String(node.attrs?.src ?? ''));
       const alt = esc(String(node.attrs?.alt ?? ''));
       const credit = node.attrs?.credit ? esc(String(node.attrs.credit)) : '';
+      const width = typeof node.attrs?.width === 'number' ? node.attrs.width : null;
       const figcaption = credit ? `<figcaption class="image-credit">${credit}</figcaption>` : '';
-      return `<figure class="post-image"><img src="${src}" alt="${alt}" loading="lazy">${figcaption}</figure>`;
+      const styleAttr = width && width < 100 ? ` style="width: ${width}%"` : '';
+      return `<figure class="post-image"${styleAttr}><img src="${src}" alt="${alt}" loading="lazy">${figcaption}</figure>`;
     }
     case 'embedCard':
       return renderEmbedCard(node.attrs ?? {});

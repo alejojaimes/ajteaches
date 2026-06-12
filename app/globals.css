@@ -552,10 +552,13 @@
 
 /* Image captions / credit and lightbox */
 .tiptap-editor figure.post-image {
-  margin: 1.5rem 0;
+  position: relative;
+  max-width: 100%;
+  margin: 1.5rem auto;
 }
 
 .tiptap-editor figure.post-image img {
+  width: 100%;
   margin: 0;
   cursor: zoom-in;
 }
@@ -569,6 +572,19 @@
 
 .tiptap-editor .post-image-view {
   display: block;
+}
+
+.tiptap-editor .image-resize-handle {
+  position: absolute;
+  right: -7px;
+  bottom: -7px;
+  z-index: 5;
+  height: 14px;
+  width: 14px;
+  border: 2px solid var(--card);
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: nwse-resize;
 }
 
 .image-lightbox-overlay {

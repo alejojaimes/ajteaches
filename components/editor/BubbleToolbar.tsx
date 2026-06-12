@@ -36,6 +36,7 @@ export function BubbleToolbar({ editor }: Props) {
   return (
     <BubbleMenu
       editor={editor}
+      shouldShow={({ editor: e }) => !e.isActive('image')}
       className="border-border bg-card flex items-center gap-0.5 rounded-lg border p-1 shadow-md"
     >
       {linkInput ? (

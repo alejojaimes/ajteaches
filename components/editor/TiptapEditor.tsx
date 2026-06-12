@@ -42,6 +42,17 @@ const ImageWithCredit = Image.extend({
           return { 'data-credit': attributes.credit };
         },
       },
+      width: {
+        default: null,
+        parseHTML: (element: HTMLElement) => {
+          const value = element.getAttribute('data-width');
+          return value ? Number(value) : null;
+        },
+        renderHTML: (attributes: { width?: number | null }) => {
+          if (!attributes.width) return {};
+          return { 'data-width': attributes.width };
+        },
+      },
     };
   },
   addNodeView() {
