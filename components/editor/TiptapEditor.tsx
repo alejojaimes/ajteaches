@@ -14,6 +14,7 @@ import { TableCell } from '@tiptap/extension-table-cell';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import { createLowlight, common } from 'lowlight';
 import type { Editor } from '@tiptap/core';
+import type { EditorView } from '@tiptap/pm/view';
 import type { PostType } from '@prisma/client';
 import type { GithubRepoSnapshot } from '@/lib/actions/posts';
 import type { CollectionListItem } from '@/lib/actions/collections';
@@ -23,9 +24,30 @@ import { EmbedCardView } from '@/components/editor/EmbedCardView';
 import { CodeBlockView } from '@/components/editor/CodeBlockView';
 import { BubbleToolbar } from '@/components/editor/BubbleToolbar';
 import { TableToolbar } from '@/components/editor/TableToolbar';
+import { ImageToolbar } from '@/components/editor/ImageToolbar';
+import { ImageNodeView } from '@/components/editor/ImageNodeView';
 import { SlashMenu } from '@/components/editor/SlashMenu';
 
 const lowlight = createLowlight(common);
+
+const ImageWithCredit = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      credit: {
+        default: null,
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-credit'),
+        renderHTML: (attributes: { credit?: string | null }) => {
+          if (!attributes.credit) return {};
+          return { 'data-credit': attributes.credit };
+        },
+      },
+    };
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(ImageNodeView);
+  },
+});
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -154,6 +176,7 @@ export function TiptapEditor({
   const [embedLoading, setEmbedLoading] = useState(false);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [imageUrlInput, setImageUrlInput] = useState('');
+  const [imageCreditInput, setImageCreditInput] = useState('');
   const [linkPostOpen, setLinkPostOpen] = useState(false);
   const [linkPostQuery, setLinkPostQuery] = useState('');
   const [linkPostResults, setLinkPostResults] = useState<AuthorPostResult[]>([]);
@@ -251,6 +274,31 @@ export function TiptapEditor({
     [save]
   );
 
+  const uploadImageFile = useCallback(
+    async (file: File, view: EditorView) => {
+      setUploading(true);
+      try {
+        const compressed = await compressImageFile(file);
+        const form = new FormData();
+        form.append('file', compressed);
+        form.append('postId', postId);
+        const res = await fetch('/api/upload', { method: 'POST', body: form });
+        if (!res.ok) throw new Error('Upload failed');
+        const { url } = (await res.json()) as { url: string };
+        const imageType = view.state.schema.nodes.image;
+        if (!imageType) return;
+        const node = imageType.create({ src: url });
+        view.dispatch(view.state.tr.replaceSelectionWith(node));
+        view.focus();
+      } catch {
+        // silent — user sees no image inserted
+      } finally {
+        setUploading(false);
+      }
+    },
+    [postId]
+  );
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -267,7 +315,7 @@ export function TiptapEditor({
           return ReactNodeViewRenderer(CodeBlockView);
         },
       }),
-      Image.configure({ inline: false, allowBase64: false }),
+      ImageWithCredit.configure({ inline: false, allowBase64: false }),
       Table.configure({ resizable: true }),
       TableRow,
       TableHeader,
@@ -283,6 +331,21 @@ export function TiptapEditor({
     content: initialContent ?? '',
     editorProps: {
       attributes: { class: 'tiptap-editor' },
+      handlePaste: (view, event) => {
+        const files = Array.from(event.clipboardData?.files ?? []);
+        const images = files.filter((file) => file.type.startsWith('image/'));
+        if (images.length === 0) return false;
+        images.forEach((file) => void uploadImageFile(file, view));
+        return true;
+      },
+      handleDrop: (view, event) => {
+        const files = Array.from(event.dataTransfer?.files ?? []);
+        const images = files.filter((file) => file.type.startsWith('image/'));
+        if (images.length === 0) return false;
+        event.preventDefault();
+        images.forEach((file) => void uploadImageFile(file, view));
+        return true;
+      },
     },
     onUpdate: ({ editor: e }) => scheduleSave(e),
   });
@@ -516,7 +579,13 @@ export function TiptapEditor({
       const res = await fetch('/api/upload', { method: 'POST', body: form });
       if (!res.ok) throw new Error('Upload failed');
       const { url } = (await res.json()) as { url: string };
-      editor.chain().focus().setImage({ src: url }).run();
+      const credit = imageCreditInput.trim();
+      editor
+        .chain()
+        .focus()
+        .insertContent({ type: 'image', attrs: { src: url, credit: credit || null } })
+        .run();
+      setImageCreditInput('');
     } catch {
       // silent — user sees no image inserted
     } finally {
@@ -526,8 +595,17 @@ export function TiptapEditor({
 
   const handleInsertImageUrl = () => {
     if (!editor || !imageUrlInput.trim()) return;
-    editor.chain().focus().setImage({ src: imageUrlInput.trim() }).run();
+    const credit = imageCreditInput.trim();
+    editor
+      .chain()
+      .focus()
+      .insertContent({
+        type: 'image',
+        attrs: { src: imageUrlInput.trim(), credit: credit || null },
+      })
+      .run();
     setImageUrlInput('');
+    setImageCreditInput('');
     setImageDialogOpen(false);
   };
 
@@ -1011,6 +1089,7 @@ export function TiptapEditor({
 
       {editor && <BubbleToolbar editor={editor} />}
       {editor && <TableToolbar editor={editor} />}
+      {editor && <ImageToolbar editor={editor} />}
       {editor && (
         <SlashMenu
           editor={editor}
@@ -1175,48 +1254,86 @@ export function TiptapEditor({
       )}
       {/* Image dialog */}
       {imageDialogOpen && (
-        <div className="border-border bg-card rounded-card mt-3 border p-4 shadow-md">
-          <p className="text-foreground mb-3 text-sm font-medium">Add image</p>
-          <div className="mb-3 flex items-center gap-2">
-            <label
-              htmlFor={fileInputId}
-              className={`rounded-button border-border text-foreground hover:bg-primary-soft/50 cursor-pointer border px-3 py-1.5 text-xs font-medium ${uploading ? 'opacity-50' : ''}`}
-            >
-              {uploading ? 'Uploading…' : 'Upload from device'}
-            </label>
-            <span className="text-muted-foreground text-xs">or paste a link below</span>
-          </div>
-          <input
-            type="url"
-            value={imageUrlInput}
-            onChange={(e) => setImageUrlInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleInsertImageUrl();
-              if (e.key === 'Escape') setImageDialogOpen(false);
-            }}
-            placeholder="https://example.com/image.jpg"
-            autoFocus
-            className="border-border text-foreground focus:ring-primary mb-3 w-full rounded-md border px-3 py-1.5 text-sm outline-none focus:ring-1"
-          />
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handleInsertImageUrl}
-              disabled={!imageUrlInput.trim()}
-              className="rounded-button bg-primary hover:bg-primary-hover px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
-            >
-              Insert
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setImageDialogOpen(false);
-                setImageUrlInput('');
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => {
+            setImageDialogOpen(false);
+            setImageUrlInput('');
+            setImageCreditInput('');
+          }}
+        >
+          <div
+            className="border-border bg-card rounded-card w-full max-w-md border p-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-foreground mb-3 text-sm font-medium">Add image</p>
+            <div className="mb-3 flex items-center gap-2">
+              <label
+                htmlFor={fileInputId}
+                className={`rounded-button border-border text-foreground hover:bg-primary-soft/50 cursor-pointer border px-3 py-1.5 text-xs font-medium ${uploading ? 'opacity-50' : ''}`}
+              >
+                {uploading ? 'Uploading…' : 'Upload from device'}
+              </label>
+              <span className="text-muted-foreground text-xs">or paste a link below</span>
+            </div>
+            <input
+              type="url"
+              value={imageUrlInput}
+              onChange={(e) => setImageUrlInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleInsertImageUrl();
+                if (e.key === 'Escape') setImageDialogOpen(false);
               }}
-              className="text-muted-foreground hover:text-foreground text-xs"
-            >
-              Cancel
-            </button>
+              placeholder="https://example.com/image.jpg"
+              autoFocus
+              className="border-border text-foreground focus:ring-primary mb-3 w-full rounded-md border px-3 py-1.5 text-sm outline-none focus:ring-1"
+            />
+            <div className="mb-3">
+              <label className="text-muted-foreground mb-1 block text-xs">
+                Credit / source (optional)
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={imageCreditInput}
+                  onChange={(e) => setImageCreditInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleInsertImageUrl();
+                    if (e.key === 'Escape') setImageDialogOpen(false);
+                  }}
+                  placeholder="e.g. Photo by Jane Doe"
+                  className="border-border text-foreground focus:ring-primary flex-1 rounded-md border px-3 py-1.5 text-sm outline-none focus:ring-1"
+                />
+                <button
+                  type="button"
+                  onClick={() => setImageCreditInput('Own work by the author')}
+                  className="rounded-button border-border text-muted-foreground hover:text-foreground border px-2 py-1.5 text-xs whitespace-nowrap"
+                >
+                  Own work
+                </button>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleInsertImageUrl}
+                disabled={!imageUrlInput.trim()}
+                className="rounded-button bg-primary hover:bg-primary-hover px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+              >
+                Insert
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setImageDialogOpen(false);
+                  setImageUrlInput('');
+                  setImageCreditInput('');
+                }}
+                className="text-muted-foreground hover:text-foreground text-xs"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

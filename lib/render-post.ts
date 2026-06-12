@@ -248,7 +248,9 @@ function renderNode(node: TiptapNode, ctx: RenderContext): string {
     case 'image': {
       const src = esc(String(node.attrs?.src ?? ''));
       const alt = esc(String(node.attrs?.alt ?? ''));
-      return `<img src="${src}" alt="${alt}">`;
+      const credit = node.attrs?.credit ? esc(String(node.attrs.credit)) : '';
+      const figcaption = credit ? `<figcaption class="image-credit">${credit}</figcaption>` : '';
+      return `<figure class="post-image"><img src="${src}" alt="${alt}" loading="lazy">${figcaption}</figure>`;
     }
     case 'embedCard':
       return renderEmbedCard(node.attrs ?? {});
