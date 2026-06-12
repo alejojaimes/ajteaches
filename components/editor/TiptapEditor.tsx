@@ -7,6 +7,10 @@ import { Placeholder } from '@tiptap/extension-placeholder';
 import { CharacterCount } from '@tiptap/extension-character-count';
 import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight';
 import { Image } from '@tiptap/extension-image';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableHeader } from '@tiptap/extension-table-header';
+import { TableCell } from '@tiptap/extension-table-cell';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import { createLowlight, common } from 'lowlight';
 import type { Editor } from '@tiptap/core';
@@ -18,6 +22,7 @@ import { EmbedNode } from '@/lib/extensions/embed';
 import { EmbedCardView } from '@/components/editor/EmbedCardView';
 import { CodeBlockView } from '@/components/editor/CodeBlockView';
 import { BubbleToolbar } from '@/components/editor/BubbleToolbar';
+import { TableToolbar } from '@/components/editor/TableToolbar';
 import { SlashMenu } from '@/components/editor/SlashMenu';
 
 const lowlight = createLowlight(common);
@@ -263,6 +268,10 @@ export function TiptapEditor({
         },
       }),
       Image.configure({ inline: false, allowBase64: false }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableHeader,
+      TableCell,
       EmbedNode.extend({
         addNodeView() {
           return ReactNodeViewRenderer(EmbedCardView);
@@ -1001,6 +1010,7 @@ export function TiptapEditor({
       )}
 
       {editor && <BubbleToolbar editor={editor} />}
+      {editor && <TableToolbar editor={editor} />}
       {editor && (
         <SlashMenu
           editor={editor}
@@ -1046,6 +1056,15 @@ export function TiptapEditor({
           className="text-muted-foreground hover:text-foreground text-xs"
         >
           + Embed
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+          }
+          className="text-muted-foreground hover:text-foreground text-xs"
+        >
+          + Table
         </button>
         {onSearchPosts && (
           <button

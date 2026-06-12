@@ -171,6 +171,16 @@ function renderNodes(nodes: TiptapNode[], ctx: RenderContext): string {
   return nodes.map((node) => renderNode(node, ctx)).join('');
 }
 
+function renderCellAttrs(attrs?: Record<string, unknown>): string {
+  if (!attrs) return '';
+  let out = '';
+  const colspan = Number(attrs.colspan ?? 1);
+  const rowspan = Number(attrs.rowspan ?? 1);
+  if (colspan > 1) out += ` colspan="${colspan}"`;
+  if (rowspan > 1) out += ` rowspan="${rowspan}"`;
+  return out;
+}
+
 function renderEmbedCard(attrs: Record<string, unknown>): string {
   const url = esc(String(attrs.url ?? ''));
   const title = esc(String(attrs.title ?? ''));
@@ -242,6 +252,14 @@ function renderNode(node: TiptapNode, ctx: RenderContext): string {
     }
     case 'embedCard':
       return renderEmbedCard(node.attrs ?? {});
+    case 'table':
+      return `<div class="table-wrapper"><table>${children()}</table></div>`;
+    case 'tableRow':
+      return `<tr>${children()}</tr>`;
+    case 'tableHeader':
+      return `<th${renderCellAttrs(node.attrs)}>${children()}</th>`;
+    case 'tableCell':
+      return `<td${renderCellAttrs(node.attrs)}>${children()}</td>`;
     default:
       return children();
   }
