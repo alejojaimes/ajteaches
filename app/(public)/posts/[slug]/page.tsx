@@ -12,6 +12,7 @@ import { getInitials } from '@/lib/utils';
 import { getServerDictionary } from '@/lib/i18n/get-locale';
 import type { GithubRepoSnapshot } from '@/lib/actions/posts';
 import { CodeCopyInit } from '@/components/blog/CodeCopyInit';
+import { ImageLightbox } from '@/components/blog/ImageLightbox';
 import { ReadingTracker } from '@/components/blog/ReadingTracker';
 import { LikeButton } from '@/components/blog/LikeButton';
 import { CommentSection } from '@/components/blog/CommentSection';
@@ -147,6 +148,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
         ) : null}
 
         <CodeCopyInit />
+        <ImageLightbox />
         <ReadingTracker postId={post.id} />
 
         <CommentSection

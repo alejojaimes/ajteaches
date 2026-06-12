@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db/client';
 import { renderPostHTML, getFirstContentImage, extractHeadings } from '@/lib/render-post';
 import { CodeCopyInit } from '@/components/blog/CodeCopyInit';
+import { ImageLightbox } from '@/components/blog/ImageLightbox';
 import { CoverImage } from '@/components/blog/CoverImage';
 import { TableOfContents } from '@/components/blog/TableOfContents';
 
@@ -61,6 +62,7 @@ export default async function PreviewPage({ params }: { params: Promise<{ token:
         )}
 
         <CodeCopyInit />
+        <ImageLightbox />
       </article>
       <aside className="hidden w-48 shrink-0 lg:block">
         <TableOfContents headings={headings} title="On this page" />
