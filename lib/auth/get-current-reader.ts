@@ -11,20 +11,22 @@ export async function getCurrentReader() {
   if (ownAuthor) return null;
 
   let reader = await prisma.reader.findUnique({ where: { clerkUserId: userId } });
+  if (reader) return reader;
 
-  if (!reader) {
-    const clerkUser = await currentUser();
-    if (!clerkUser) return null;
+  const clerkUser = await currentUser();
+  if (!clerkUser) return null;
 
-    reader = await prisma.reader.create({
-      data: {
-        clerkUserId: userId,
-        name: `${clerkUser.firstName ?? ''} ${clerkUser.lastName ?? ''}`.trim() || 'Reader',
-        email: clerkUser.emailAddresses[0]?.emailAddress,
-        avatar: clerkUser.imageUrl,
-      },
-    });
-  }
+  const name = `${clerkUser.firstName ?? ''} ${clerkUser.lastName ?? ''}`.trim() || 'Reader';
+  reader = await prisma.reader.upsert({
+    where: { clerkUserId: userId },
+    create: {
+      clerkUserId: userId,
+      name,
+      email: clerkUser.emailAddresses[0]?.emailAddress,
+      avatar: clerkUser.imageUrl,
+    },
+    update: { name, avatar: clerkUser.imageUrl },
+  });
 
   return reader;
 }
