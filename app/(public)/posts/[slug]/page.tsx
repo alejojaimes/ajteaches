@@ -11,7 +11,7 @@ import { renderPostHTML, extractHeadings, getFirstContentImage } from '@/lib/ren
 import { TableOfContents } from '@/components/blog/TableOfContents';
 import { CoverImage } from '@/components/blog/CoverImage';
 import { getInitials } from '@/lib/utils';
-import { getServerDictionary } from '@/lib/i18n/get-locale';
+import { getServerDictionary, getServerLocale } from '@/lib/i18n/get-locale';
 import type { GithubRepoSnapshot } from '@/lib/actions/posts';
 import { CodeCopyInit } from '@/components/blog/CodeCopyInit';
 import { ImageLightbox } from '@/components/blog/ImageLightbox';
@@ -21,6 +21,7 @@ import { CommentSection } from '@/components/blog/CommentSection';
 import { GithubRepoCard } from '@/components/blog/GithubRepoCard';
 import { AttachmentList } from '@/components/blog/AttachmentList';
 import { SubscribePopup } from '@/components/blog/SubscribePopup';
+import { ScrollToTop } from '@/components/blog/ScrollToTop';
 
 export async function generateStaticParams() {
   const posts = await getPublishedPosts({ limit: 1000 });
@@ -42,12 +43,28 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
       ? (post.githubRepoData as unknown as GithubRepoSnapshot)
       : null;
 
-  const [{ liked, count }, comments, reader, t] = await Promise.all([
+  const [{ liked, count }, comments, reader, t, locale] = await Promise.all([
     getLikeState(post.id),
     getPostComments(post.id),
     getCurrentReader(),
     getServerDictionary(),
+    getServerLocale(),
   ]);
+
+  const dateLocale = locale === 'es' ? 'es-CO' : 'en-US';
+  const formattedDate = post.publishedAt
+    ? new Intl.DateTimeFormat(dateLocale, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      }).format(post.publishedAt) +
+      ' · ' +
+      new Intl.DateTimeFormat(dateLocale, {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      }).format(post.publishedAt)
+    : '';
 
   const headings = extractHeadings(post.contentJson);
 
@@ -76,7 +93,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
             </Link>
           </div>
         )}
-        <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
           <span className="rounded-badge bg-primary-soft text-primary px-2 py-1 text-xs font-semibold">
             {post.postType === 'tutorial' ? 'Tutorial' : 'Blog'}
           </span>
@@ -88,9 +105,6 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
               {tag.name}
             </span>
           ))}
-          <span className="text-muted-foreground text-sm">
-            {readTime} min read · {post.publishedAt?.toLocaleDateString('en-US')}
-          </span>
         </div>
 
         <h1 className="text-foreground mb-4 text-4xl leading-tight font-bold">{post.title}</h1>
@@ -104,7 +118,12 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
                 {getInitials(post.author.name)}
               </AvatarFallback>
             </Avatar>
-            <span className="text-muted-foreground text-sm">{post.author.name}</span>
+            <div className="flex flex-col">
+              <span className="text-foreground text-sm font-medium">{post.author.name}</span>
+              <span className="text-muted-foreground text-xs">
+                {readTime} min read · {formattedDate}
+              </span>
+            </div>
           </div>
           <LikeButton postId={post.id} initialLiked={liked} initialCount={count} />
         </div>
@@ -150,6 +169,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
         <TableOfContents headings={headings} title={t.toc.title} />
       </aside>
       <SubscribePopup isSubscribed={reader?.newsletterOptIn ?? false} />
+      <ScrollToTop />
     </div>
   );
 }
