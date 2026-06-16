@@ -207,7 +207,8 @@ model SavedPost {
 }
 
 model EmailTemplate {
-  key       String   @id
+  key       String   @id @default(cuid())
+  name      String   @default("")
   subject   String
   bodyHtml  String
   updatedAt DateTime @updatedAt
