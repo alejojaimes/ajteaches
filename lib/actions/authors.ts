@@ -21,7 +21,7 @@ export async function updateAuthor(payload: {
   avatar?: string;
 }): Promise<{ ok: true }> {
   const author = await getCurrentAuthor();
-  if (!author) redirect('/sign-in');
+  if (!author || !author.isOwner) redirect('/sign-in');
 
   await prisma.author.update({
     where: { id: author.id },
