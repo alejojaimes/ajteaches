@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import { StarterKit } from '@tiptap/starter-kit';
 import { Copy, Check, Mail } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getInitials } from '@/lib/utils';
@@ -119,8 +121,7 @@ export function UsersList({ readers }: Props) {
 
       {composeOpen && (
         <ComposeEmailDialog
-          recipientCount={selected.size}
-          readerIds={[...selected]}
+          selectedReaders={readers.filter((r) => selected.has(r.id))}
           onClose={() => setComposeOpen(false)}
         />
       )}
@@ -129,25 +130,45 @@ export function UsersList({ readers }: Props) {
 }
 
 function ComposeEmailDialog({
-  recipientCount,
-  readerIds,
+  selectedReaders,
   onClose,
 }: {
-  recipientCount: number;
-  readerIds: string[];
+  selectedReaders: ReaderListItem[];
   onClose: () => void;
 }) {
   const [subject, setSubject] = useState('');
-  const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState<number | null>(null);
 
+  const editor = useEditor({
+    extensions: [StarterKit],
+    editorProps: {
+      attributes: {
+        class:
+          'prose prose-sm max-w-none min-h-[140px] px-3 py-2 text-sm text-foreground focus:outline-none',
+      },
+    },
+  });
+
+  const recipientCount = selectedReaders.length;
+  const title =
+    recipientCount === 1
+      ? `Email to ${selectedReaders[0]?.name ?? 'user'}`
+      : `Email to ${recipientCount} users`;
+
+  const btnClass = (active: boolean) =>
+    `rounded px-2 py-1 text-xs font-medium transition ${
+      active ? 'bg-primary text-white' : 'text-foreground hover:bg-primary-soft hover:text-primary'
+    }`;
+
   const send = async () => {
+    if (!editor) return;
     setSending(true);
     setError(null);
     try {
-      const result = await sendEmailToReaders(readerIds, subject.trim(), message.trim());
+      const readerIds = selectedReaders.map((r) => r.id);
+      const result = await sendEmailToReaders(readerIds, subject.trim(), editor.getHTML());
       if (result.ok) {
         setSent(result.sent);
       } else {
@@ -164,12 +185,10 @@ function ComposeEmailDialog({
       onClick={onClose}
     >
       <div
-        className="border-border bg-card mx-4 w-full max-w-md rounded-2xl border p-5 shadow-2xl"
+        className="border-border bg-card mx-4 w-full max-w-lg rounded-2xl border p-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-foreground mb-3 text-base font-semibold">
-          Email {recipientCount} {recipientCount === 1 ? 'user' : 'users'}
-        </h3>
+        <h3 className="text-foreground mb-3 text-base font-semibold">{title}</h3>
 
         {sent !== null ? (
           <div>
@@ -193,13 +212,62 @@ function ComposeEmailDialog({
                 autoFocus
                 className="border-border bg-background text-foreground rounded-button focus:border-primary w-full border px-3 py-2 text-sm focus:outline-none"
               />
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Message"
-                rows={6}
-                className="border-border bg-background text-foreground rounded-button focus:border-primary w-full resize-none border px-3 py-2 text-sm focus:outline-none"
-              />
+              <div className="border-border rounded-button overflow-hidden border">
+                <div className="border-border flex items-center gap-0.5 border-b px-2 py-1">
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      editor?.chain().focus().toggleBold().run();
+                    }}
+                    className={btnClass(editor?.isActive('bold') ?? false)}
+                  >
+                    B
+                  </button>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      editor?.chain().focus().toggleItalic().run();
+                    }}
+                    className={btnClass(editor?.isActive('italic') ?? false)}
+                  >
+                    <em>I</em>
+                  </button>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      editor?.chain().focus().toggleStrike().run();
+                    }}
+                    className={btnClass(editor?.isActive('strike') ?? false)}
+                  >
+                    <s>S</s>
+                  </button>
+                  <div className="bg-border mx-1 h-4 w-px" />
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      editor?.chain().focus().toggleBulletList().run();
+                    }}
+                    className={btnClass(editor?.isActive('bulletList') ?? false)}
+                  >
+                    • List
+                  </button>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      editor?.chain().focus().toggleOrderedList().run();
+                    }}
+                    className={btnClass(editor?.isActive('orderedList') ?? false)}
+                  >
+                    1. List
+                  </button>
+                </div>
+                <EditorContent editor={editor} />
+              </div>
             </div>
             {error && <p className="text-destructive mt-2 text-xs">{error}</p>}
             <div className="mt-4 flex justify-end gap-2">
@@ -212,7 +280,7 @@ function ComposeEmailDialog({
               </button>
               <button
                 type="button"
-                disabled={sending || !subject.trim() || !message.trim()}
+                disabled={sending || !subject.trim() || !editor || editor.isEmpty}
                 onClick={() => void send()}
                 className="rounded-button bg-primary hover:bg-primary-hover px-4 py-2 text-sm font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50"
               >

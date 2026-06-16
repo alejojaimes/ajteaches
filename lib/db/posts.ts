@@ -70,7 +70,7 @@ export async function getPublishedPosts({
   collectionIds?: string[];
   query?: string;
 } = {}) {
-  return prisma.post.findMany({
+  const posts = await prisma.post.findMany({
     where: {
       status: 'published',
       deletedAt: null,
@@ -90,6 +90,39 @@ export async function getPublishedPosts({
     take: limit,
     include: { author: true, tags: true, collection: true },
   });
+
+  if (posts.length === 0) return [];
+
+  const postIds = posts.map((p) => p.id);
+
+  const [viewCounts, likeCounts, commentCounts] = await Promise.all([
+    prisma.postEvent.groupBy({
+      by: ['postId'],
+      where: { postId: { in: postIds }, eventType: 'view' },
+      _count: { _all: true },
+    }),
+    prisma.postLike.groupBy({
+      by: ['postId'],
+      where: { postId: { in: postIds } },
+      _count: { _all: true },
+    }),
+    prisma.comment.groupBy({
+      by: ['postId'],
+      where: { postId: { in: postIds }, deletedAt: null },
+      _count: { _all: true },
+    }),
+  ]);
+
+  const views = new Map(viewCounts.map((r) => [r.postId, r._count._all]));
+  const likes = new Map(likeCounts.map((r) => [r.postId, r._count._all]));
+  const comments = new Map(commentCounts.map((r) => [r.postId, r._count._all]));
+
+  return posts.map((post) => ({
+    ...post,
+    viewCount: views.get(post.id) ?? 0,
+    likeCount: likes.get(post.id) ?? 0,
+    commentCount: comments.get(post.id) ?? 0,
+  }));
 }
 
 export async function getPostBySlug(slug: string) {

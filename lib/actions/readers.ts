@@ -7,6 +7,7 @@ import { getCurrentAuthor } from '@/lib/auth/get-current-author';
 import { prisma } from '@/lib/db/client';
 import { getResendClient, getFromEmail } from '@/lib/email/client';
 import { renderAdminMessageEmail } from '@/lib/email/templates/admin-message';
+import { renderNewsletterOptInEmail } from '@/lib/email/templates/newsletter-optin';
 
 export async function updateReaderProfile(payload: {
   name: string;
@@ -50,6 +51,16 @@ export async function setNewsletterOptIn(optIn: boolean): Promise<SetNewsletterO
     },
   });
 
+  if (optIn && reader.email) {
+    const resend = getResendClient();
+    if (resend) {
+      const { subject, html } = renderNewsletterOptInEmail({ name: reader.name });
+      resend.emails
+        .send({ from: getFromEmail(), to: reader.email, subject, html })
+        .catch((err: unknown) => console.error('Failed to send newsletter opt-in email', err));
+    }
+  }
+
   revalidatePath('/');
   revalidatePath('/account');
   return { optedIn: optIn };
@@ -86,7 +97,11 @@ export async function sendEmailToReaders(
   });
   if (readers.length === 0) return { ok: false, error: 'No recipients with an email address' };
 
-  const { html } = renderAdminMessageEmail({ subject, message, authorName: author.name });
+  const { html } = renderAdminMessageEmail({
+    subject,
+    messageHtml: message,
+    authorName: author.name,
+  });
   const from = getFromEmail();
 
   for (const batch of chunk(readers, SEND_BATCH_SIZE)) {
