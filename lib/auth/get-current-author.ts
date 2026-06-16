@@ -27,13 +27,15 @@ export async function getCurrentAuthor() {
       });
     } else {
       const userEmail = clerkUser.emailAddresses[0]?.emailAddress;
-      const isOwner = !!process.env.ADMIN_EMAIL && userEmail === process.env.ADMIN_EMAIL;
+      const adminEmail = process.env.ADMIN_EMAIL;
+      if (!adminEmail || userEmail !== adminEmail) return null;
+
       author = await prisma.author.create({
         data: {
           clerkUserId: userId,
           name: `${clerkUser.firstName ?? ''} ${clerkUser.lastName ?? ''}`.trim(),
           email: userEmail,
-          isOwner,
+          isOwner: true,
         },
       });
     }
