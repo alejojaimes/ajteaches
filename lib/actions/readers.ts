@@ -8,6 +8,7 @@ import { prisma } from '@/lib/db/client';
 import { getResendClient, getFromEmail } from '@/lib/email/client';
 import { renderAdminMessageEmail } from '@/lib/email/templates/admin-message';
 import { renderNewsletterOptInEmail } from '@/lib/email/templates/newsletter-optin';
+import { renderDbTemplate } from '@/lib/email/render-db-template';
 
 export async function updateReaderProfile(payload: {
   name: string;
@@ -54,7 +55,12 @@ export async function setNewsletterOptIn(optIn: boolean): Promise<SetNewsletterO
   if (optIn && reader.email) {
     const resend = getResendClient();
     if (resend) {
-      const { subject, html } = renderNewsletterOptInEmail({ name: reader.name });
+      const dbTemplate = await prisma.emailTemplate.findUnique({
+        where: { key: 'newsletter_optin' },
+      });
+      const { subject, html } = dbTemplate
+        ? renderDbTemplate(dbTemplate.subject, dbTemplate.bodyHtml, { name: reader.name })
+        : renderNewsletterOptInEmail({ name: reader.name });
       resend.emails
         .send({ from: getFromEmail(), to: reader.email, subject, html })
         .catch((err: unknown) => console.error('Failed to send newsletter opt-in email', err));
