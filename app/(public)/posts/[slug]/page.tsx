@@ -20,6 +20,7 @@ import { LikeButton } from '@/components/blog/LikeButton';
 import { CommentSection } from '@/components/blog/CommentSection';
 import { GithubRepoCard } from '@/components/blog/GithubRepoCard';
 import { AttachmentList } from '@/components/blog/AttachmentList';
+import { SubscribePopup } from '@/components/blog/SubscribePopup';
 
 export async function generateStaticParams() {
   const posts = await getPublishedPosts({ limit: 1000 });
@@ -108,21 +109,6 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
           <LikeButton postId={post.id} initialLiked={liked} initialCount={count} />
         </div>
 
-        {!reader && (
-          <div className="border-border bg-card mb-8 flex flex-col items-start gap-3 rounded-xl border p-5 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-foreground text-sm font-semibold">{t.ctaBanner.title}</p>
-              <p className="text-muted-foreground mt-1 text-sm">{t.ctaBanner.description}</p>
-            </div>
-            <Link
-              href={`/sign-up?redirect_url=${encodeURIComponent(`/posts/${post.slug}`)}`}
-              className="rounded-button bg-primary hover:bg-primary-hover shrink-0 px-5 py-2 text-sm font-medium text-white transition-colors"
-            >
-              {t.ctaBanner.signUp}
-            </Link>
-          </div>
-        )}
-
         <div className="mb-8 overflow-hidden rounded-xl">
           <CoverImage
             src={post.coverImage ?? getFirstContentImage(post.contentJson)}
@@ -163,6 +149,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
       <aside className="hidden w-48 shrink-0 lg:block">
         <TableOfContents headings={headings} title={t.toc.title} />
       </aside>
+      <SubscribePopup isSubscribed={reader?.newsletterOptIn ?? false} />
     </div>
   );
 }

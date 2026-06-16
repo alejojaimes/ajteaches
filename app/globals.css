@@ -651,6 +651,36 @@
   background: rgba(255, 255, 255, 0.2);
 }
 
+/* Newsletter bell animation */
+@keyframes bell-ring {
+  0%,
+  55%,
+  100% {
+    transform: rotate(0deg);
+  }
+  5% {
+    transform: rotate(18deg);
+  }
+  15% {
+    transform: rotate(-16deg);
+  }
+  25% {
+    transform: rotate(12deg);
+  }
+  35% {
+    transform: rotate(-10deg);
+  }
+  45% {
+    transform: rotate(5deg);
+  }
+}
+
+.bell-ring {
+  animation: bell-ring 2.8s ease-in-out infinite;
+  transform-origin: 50% 4px;
+  display: inline-block;
+}
+
 /* Syntax highlighting — lowlight/highlight.js token classes */
 .tiptap-editor .hljs-comment,
 .tiptap-editor .hljs-quote {

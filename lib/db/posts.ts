@@ -63,13 +63,28 @@ export async function getPublishedPosts({
   limit = 10,
   type,
   collectionIds,
-}: { limit?: number; type?: 'blog' | 'tutorial'; collectionIds?: string[] } = {}) {
+  query,
+}: {
+  limit?: number;
+  type?: 'blog' | 'tutorial';
+  collectionIds?: string[];
+  query?: string;
+} = {}) {
   return prisma.post.findMany({
     where: {
       status: 'published',
       deletedAt: null,
       ...(type ? { postType: type } : {}),
       ...(collectionIds ? { collectionId: { in: collectionIds } } : {}),
+      ...(query
+        ? {
+            OR: [
+              { title: { contains: query, mode: 'insensitive' } },
+              { excerpt: { contains: query, mode: 'insensitive' } },
+              { tags: { some: { name: { contains: query, mode: 'insensitive' } } } },
+            ],
+          }
+        : {}),
     },
     orderBy: { publishedAt: 'desc' },
     take: limit,

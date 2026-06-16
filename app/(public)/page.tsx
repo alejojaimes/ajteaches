@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { getPublishedPosts } from '@/lib/db/posts';
 import { getSavedPostIds } from '@/lib/db/saves';
 import { getCollectionWithDescendantIds, getCollectionTree } from '@/lib/db/collections';
@@ -6,8 +7,10 @@ import { getCurrentReader } from '@/lib/auth/get-current-reader';
 import { getServerDictionary } from '@/lib/i18n/get-locale';
 import { getFirstContentImage } from '@/lib/render-post';
 import { PostCard } from '@/components/blog/PostCard';
-import { NewsletterSection } from '@/components/blog/NewsletterSection';
 import { AnimatedHeroTitle } from '@/components/blog/AnimatedHeroTitle';
+import { EmptyPostsState } from '@/components/blog/EmptyPostsState';
+import { SearchBar } from '@/components/blog/SearchBar';
+import { SubscribePopup } from '@/components/blog/SubscribePopup';
 import { Reveal } from '@/components/profile/Reveal';
 
 type PostType = 'blog' | 'tutorial';
@@ -19,10 +22,11 @@ function isPostType(value: string | undefined): value is PostType {
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string; collection?: string }>;
+  searchParams: Promise<{ type?: string; collection?: string; q?: string }>;
 }) {
-  const { type: typeParam, collection: collectionParam } = await searchParams;
+  const { type: typeParam, collection: collectionParam, q } = await searchParams;
   const type = isPostType(typeParam) ? typeParam : undefined;
+  const query = q?.trim() || undefined;
 
   const [collectionFilter, collectionTree] = await Promise.all([
     collectionParam ? getCollectionWithDescendantIds(collectionParam) : null,
@@ -30,7 +34,7 @@ export default async function Home({
   ]);
 
   const [posts, reader, t] = await Promise.all([
-    getPublishedPosts({ limit: 10, type, collectionIds: collectionFilter?.ids }),
+    getPublishedPosts({ limit: 10, type, collectionIds: collectionFilter?.ids, query }),
     getCurrentReader(),
     getServerDictionary(),
   ]);
@@ -53,10 +57,12 @@ export default async function Home({
         <Reveal delay={0.08}>
           <p className="text-muted-foreground text-lg">{t.hero.subtitle}</p>
         </Reveal>
-        <Reveal delay={0.16}>
-          <p className="text-muted-foreground mx-auto mt-4 max-w-xl text-sm">{t.hero.intro}</p>
-        </Reveal>
       </section>
+
+      <Suspense>
+        <SearchBar initialQuery={query ?? ''} />
+      </Suspense>
+
       {topLevelCollections.length > 0 && (
         <div className="mb-8 flex flex-wrap items-center justify-center gap-2">
           <Link
@@ -84,9 +90,10 @@ export default async function Home({
           ))}
         </div>
       )}
+
       <section className="grid grid-cols-1 gap-6 md:grid-cols-3">
         {posts.length === 0 ? (
-          <p className="text-muted-foreground col-span-3 text-center">{t.hero.noPosts}</p>
+          <EmptyPostsState query={query} />
         ) : (
           posts.map((post, index) => (
             <Reveal key={post.id} delay={Math.min(index, 6) * 0.06}>
@@ -101,11 +108,8 @@ export default async function Home({
           ))
         )}
       </section>
-      <div className="mt-16">
-        <Reveal>
-          <NewsletterSection reader={reader ? { newsletterOptIn: reader.newsletterOptIn } : null} />
-        </Reveal>
-      </div>
+
+      <SubscribePopup isSubscribed={reader?.newsletterOptIn ?? false} />
     </div>
   );
 }
