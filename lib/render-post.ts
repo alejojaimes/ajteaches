@@ -192,9 +192,9 @@ function renderEmbedCard(attrs: Record<string, unknown>): string {
     : '';
   const titleHtml = title ? `<p class="embed-card-title">${title}</p>` : '';
   const descHtml = description ? `<p class="embed-card-description">${description}</p>` : '';
-  const urlHtml = `<p class="embed-card-url">${url}</p>`;
+  const ctaHtml = `<p class="embed-card-cta">Read post →</p>`;
 
-  return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="embed-card">${imgHtml}<div class="embed-card-body">${titleHtml}${descHtml}${urlHtml}</div></a>`;
+  return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="embed-card">${imgHtml}<div class="embed-card-body">${titleHtml}${descHtml}${ctaHtml}</div></a>`;
 }
 
 function renderNode(node: TiptapNode, ctx: RenderContext): string {
