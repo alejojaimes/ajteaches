@@ -9,7 +9,8 @@ import { notifyReadersOnPostPublished } from '@/lib/email/notify';
 import { getFirstContentImage, extractContentImageUrls } from '@/lib/render-post';
 import { deletePostMedia, deleteCloudinaryAsset } from '@/lib/cloudinary';
 
-const GITHUB_REPO_URL_RE = /^https?:\/\/github\.com\/([^/\s#?]+)\/([^/\s#?]+?)(?:\.git)?\/?$/i;
+const GITHUB_REPO_URL_RE =
+  /^https?:\/\/github\.com\/([^/\s#?]+)\/([^/\s#?]+?)(?:\.git)?(?:[/#?].*)?$/i;
 
 export type GithubRepoSnapshot = {
   fullName: string;
@@ -258,6 +259,7 @@ export async function searchAuthorPosts(query: string) {
     select: {
       slug: true,
       title: true,
+      excerpt: true,
       coverImage: true,
       publishedAt: true,
     },
