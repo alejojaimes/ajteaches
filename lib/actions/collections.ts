@@ -33,7 +33,7 @@ export async function createCollection(
   parentId?: string | null
 ): Promise<CollectionListItem> {
   const author = await getCurrentAuthor();
-  if (!author) throw new Error('Unauthorized');
+  if (!author || !author.isOwner) throw new Error('Unauthorized');
 
   const trimmed = name.trim();
   if (!trimmed) throw new Error('Collection name is required');
@@ -53,7 +53,7 @@ export async function setPostCollection(
   collectionId: string | null
 ): Promise<{ ok: true }> {
   const author = await getCurrentAuthor();
-  if (!author) throw new Error('Unauthorized');
+  if (!author || !author.isOwner) throw new Error('Unauthorized');
 
   const post = await prisma.post.findUnique({ where: { id: postId } });
   if (!post || post.authorId !== author.id) throw new Error('Not found');
