@@ -25,7 +25,7 @@ export function EmbedCardView({ node }: ReactNodeViewProps) {
         <div className="embed-card-body">
           {title && <p className="embed-card-title">{title}</p>}
           {description && <p className="embed-card-description">{description}</p>}
-          <p className="embed-card-url">{url}</p>
+          <p className="embed-card-cta">Read post →</p>
         </div>
       </a>
     </NodeViewWrapper>

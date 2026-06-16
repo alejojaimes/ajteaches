@@ -519,13 +519,50 @@
   margin: 0;
 }
 
-.embed-card-url {
+.embed-card-cta {
   font-size: 0.75rem;
   color: var(--primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin: 0;
+  font-weight: 500;
+  margin: 4px 0 0 0;
+}
+
+/* Upload placeholder (inline spinner while pasting/dropping images) */
+.upload-placeholder {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1.5px dashed var(--border);
+  border-radius: 10px;
+  margin: 1rem 0;
+  background: var(--primary-soft);
+  user-select: none;
+  pointer-events: none;
+}
+
+.upload-placeholder::before {
+  content: '';
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--primary);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: upload-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+.upload-placeholder::after {
+  content: 'Uploading image…';
+  font-size: 0.875rem;
+  color: var(--primary);
+  font-weight: 500;
+}
+
+@keyframes upload-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Mention chips */

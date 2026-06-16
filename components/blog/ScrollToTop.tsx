@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { ChevronUp } from 'lucide-react';
 
 export function ScrollToTop() {
   const [visible, setVisible] = useState(false);
@@ -16,23 +17,11 @@ export function ScrollToTop() {
       type="button"
       onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
       aria-label="Back to top"
-      className={`border-border bg-card text-muted-foreground hover:text-foreground fixed right-6 bottom-24 z-40 flex h-10 w-10 items-center justify-center rounded-full border shadow-md transition-all duration-300 ${
+      className={`bg-primary hover:bg-primary-hover fixed right-6 bottom-24 z-40 flex h-10 w-10 items-center justify-center rounded-full shadow-md transition-all duration-500 ${
         visible ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-4 opacity-0'
       }`}
     >
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M12 19V5M5 12l7-7 7 7" />
-      </svg>
+      <ChevronUp className="h-5 w-5 text-white" strokeWidth={2.5} />
     </button>
   );
 }

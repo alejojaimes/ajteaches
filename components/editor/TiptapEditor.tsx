@@ -15,11 +15,13 @@ import { ReactNodeViewRenderer } from '@tiptap/react';
 import { createLowlight, common } from 'lowlight';
 import type { Editor } from '@tiptap/core';
 import type { EditorView } from '@tiptap/pm/view';
+import type { EditorState } from '@tiptap/pm/state';
 import type { PostType } from '@prisma/client';
 import type { GithubRepoSnapshot } from '@/lib/actions/posts';
 import type { CollectionListItem } from '@/lib/actions/collections';
 import { compressImageFile } from '@/lib/image-compress';
 import { EmbedNode } from '@/lib/extensions/embed';
+import { UploadPlaceholder } from '@/lib/extensions/upload-placeholder';
 import { EmbedCardView } from '@/components/editor/EmbedCardView';
 import { CodeBlockView } from '@/components/editor/CodeBlockView';
 import { BubbleToolbar } from '@/components/editor/BubbleToolbar';
@@ -29,6 +31,19 @@ import { ImageNodeView } from '@/components/editor/ImageNodeView';
 import { SlashMenu } from '@/components/editor/SlashMenu';
 
 const lowlight = createLowlight(common);
+
+function findUploadPlaceholder(
+  state: EditorState,
+  id: string
+): { from: number; to: number } | null {
+  let found: { from: number; to: number } | null = null;
+  state.doc.descendants((node, pos) => {
+    if (node.type.name === 'uploadPlaceholder' && node.attrs.uploadId === id) {
+      found = { from: pos, to: pos + node.nodeSize };
+    }
+  });
+  return found;
+}
 
 const ImageWithCredit = Image.extend({
   addAttributes() {
@@ -120,6 +135,7 @@ type Props = {
 export type AuthorPostResult = {
   slug: string;
   title: string;
+  excerpt: string | null;
   coverImage: string | null;
   publishedAt: Date | null;
 };
@@ -287,7 +303,12 @@ export function TiptapEditor({
 
   const uploadImageFile = useCallback(
     async (file: File, view: EditorView) => {
-      setUploading(true);
+      const uploadId = `upload-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const placeholderType = view.state.schema.nodes.uploadPlaceholder;
+      if (placeholderType) {
+        const { from } = view.state.selection;
+        view.dispatch(view.state.tr.insert(from, placeholderType.create({ uploadId })));
+      }
       try {
         const compressed = await compressImageFile(file);
         const form = new FormData();
@@ -296,15 +317,21 @@ export function TiptapEditor({
         const res = await fetch('/api/upload', { method: 'POST', body: form });
         if (!res.ok) throw new Error('Upload failed');
         const { url } = (await res.json()) as { url: string };
+        const placeholder = findUploadPlaceholder(view.state, uploadId);
         const imageType = view.state.schema.nodes.image;
-        if (!imageType) return;
-        const node = imageType.create({ src: url });
-        view.dispatch(view.state.tr.replaceSelectionWith(node));
-        view.focus();
+        if (placeholder && imageType) {
+          view.dispatch(
+            view.state.tr
+              .delete(placeholder.from, placeholder.to)
+              .insert(placeholder.from, imageType.create({ src: url }))
+          );
+          view.focus();
+        }
       } catch {
-        // silent — user sees no image inserted
-      } finally {
-        setUploading(false);
+        const placeholder = findUploadPlaceholder(view.state, uploadId);
+        if (placeholder) {
+          view.dispatch(view.state.tr.delete(placeholder.from, placeholder.to));
+        }
       }
     },
     [postId]
@@ -338,6 +365,7 @@ export function TiptapEditor({
       }),
       Placeholder.configure({ placeholder: 'Tell your story...' }),
       CharacterCount,
+      UploadPlaceholder,
     ],
     content: initialContent ?? '',
     editorProps: {
@@ -569,7 +597,7 @@ export function TiptapEditor({
         attrs: {
           url: `/posts/${post.slug}`,
           title: post.title,
-          description: post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : '',
+          description: post.excerpt ?? '',
           image: post.coverImage ?? '',
         },
       })
