@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import { StarterKit } from '@tiptap/starter-kit';
-import { Copy, Check, Mail } from 'lucide-react';
+import { Copy, Check, Mail, ChevronDown } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getInitials } from '@/lib/utils';
 import { sendEmailToReaders } from '@/lib/actions/readers';
 import type { ReaderListItem } from '@/lib/db/readers';
+import type { EmailTemplateItem } from '@/lib/actions/email-templates';
 
 const dateFormatter = new Intl.DateTimeFormat('en-US', {
   day: '2-digit',
@@ -17,9 +18,10 @@ const dateFormatter = new Intl.DateTimeFormat('en-US', {
 
 type Props = {
   readers: ReaderListItem[];
+  templates: EmailTemplateItem[];
 };
 
-export function UsersList({ readers }: Props) {
+export function UsersList({ readers, templates }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [composeOpen, setComposeOpen] = useState(false);
@@ -122,6 +124,7 @@ export function UsersList({ readers }: Props) {
       {composeOpen && (
         <ComposeEmailDialog
           selectedReaders={readers.filter((r) => selected.has(r.id))}
+          templates={templates}
           onClose={() => setComposeOpen(false)}
         />
       )}
@@ -131,15 +134,18 @@ export function UsersList({ readers }: Props) {
 
 function ComposeEmailDialog({
   selectedReaders,
+  templates,
   onClose,
 }: {
   selectedReaders: ReaderListItem[];
+  templates: EmailTemplateItem[];
   onClose: () => void;
 }) {
   const [subject, setSubject] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState<number | null>(null);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
 
   const editor = useEditor({
     extensions: [StarterKit],
@@ -161,6 +167,12 @@ function ComposeEmailDialog({
     `rounded px-2 py-1 text-xs font-medium transition ${
       active ? 'bg-primary text-white' : 'text-foreground hover:bg-primary-soft hover:text-primary'
     }`;
+
+  const loadTemplate = (t: EmailTemplateItem) => {
+    setSubject(t.subject);
+    editor?.commands.setContent(t.bodyHtml);
+    setTemplatePickerOpen(false);
+  };
 
   const send = async () => {
     if (!editor) return;
@@ -204,6 +216,38 @@ function ComposeEmailDialog({
         ) : (
           <>
             <div className="space-y-3">
+              {templates.length > 0 && (
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setTemplatePickerOpen((v) => !v)}
+                    className="border-border text-muted-foreground hover:border-primary hover:text-primary inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors"
+                  >
+                    Use template
+                    <ChevronDown className="h-3 w-3" />
+                  </button>
+                  {templatePickerOpen && (
+                    <div className="border-border bg-card absolute top-full left-0 z-10 mt-1 w-64 rounded-xl border shadow-lg">
+                      <ul className="max-h-56 overflow-y-auto py-1">
+                        {templates.map((t) => (
+                          <li key={t.key}>
+                            <button
+                              type="button"
+                              onClick={() => loadTemplate(t)}
+                              className="hover:bg-primary-soft w-full px-4 py-2 text-left"
+                            >
+                              <p className="text-foreground text-sm font-medium">
+                                {t.name || t.key}
+                              </p>
+                              <p className="text-muted-foreground truncate text-xs">{t.subject}</p>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
               <input
                 type="text"
                 value={subject}

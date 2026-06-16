@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentAuthor } from '@/lib/auth/get-current-author';
 import { getReaders, READERS_PAGE_SIZE } from '@/lib/db/readers';
+import { getEmailTemplates } from '@/lib/actions/email-templates';
 import { UsersList } from '@/components/users/UsersList';
 
 function parsePage(value: string | undefined): number {
@@ -20,7 +21,10 @@ export default async function UsersPage({ searchParams }: Props) {
   const params = await searchParams;
   const page = parsePage(params.page);
 
-  const { readers, hasMore } = await getReaders(page);
+  const [{ readers, hasMore }, templates] = await Promise.all([
+    getReaders(page),
+    getEmailTemplates(),
+  ]);
 
   return (
     <div>
@@ -31,7 +35,7 @@ export default async function UsersPage({ searchParams }: Props) {
         </p>
       </header>
 
-      <UsersList readers={readers} />
+      <UsersList readers={readers} templates={templates} />
 
       {hasMore && (
         <div className="mt-8 flex justify-center">
