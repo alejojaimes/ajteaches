@@ -35,7 +35,7 @@ function calcReadTime(wordCount: number): number {
 
 export async function createPost(): Promise<never> {
   const author = await getCurrentAuthor();
-  if (!author) redirect('/sign-in');
+  if (!author || !author.isOwner) redirect('/sign-in');
 
   const post = await prisma.post.create({
     data: {
@@ -61,7 +61,7 @@ export async function updatePost(
   }
 ): Promise<{ ok: true }> {
   const author = await getCurrentAuthor();
-  if (!author) throw new Error('Unauthorized');
+  if (!author || !author.isOwner) throw new Error('Unauthorized');
 
   const post = await prisma.post.findUnique({ where: { id: postId } });
   if (!post || post.authorId !== author.id) throw new Error('Not found');
@@ -125,7 +125,7 @@ export async function updatePost(
 
 export async function setCoverImage(postId: string, url: string | null): Promise<{ ok: true }> {
   const author = await getCurrentAuthor();
-  if (!author) throw new Error('Unauthorized');
+  if (!author || !author.isOwner) throw new Error('Unauthorized');
 
   const post = await prisma.post.findUnique({ where: { id: postId } });
   if (!post || post.authorId !== author.id) throw new Error('Not found');
@@ -156,7 +156,7 @@ export async function setCoverImagePosition(
   position: string
 ): Promise<{ ok: true }> {
   const author = await getCurrentAuthor();
-  if (!author) throw new Error('Unauthorized');
+  if (!author || !author.isOwner) throw new Error('Unauthorized');
 
   if (!COVER_POSITION_RE.test(position)) throw new Error('Invalid position');
 
@@ -178,7 +178,7 @@ export async function setGithubRepo(
   url: string
 ): Promise<{ ok: true; repo: GithubRepoSnapshot | null }> {
   const author = await getCurrentAuthor();
-  if (!author) throw new Error('Unauthorized');
+  if (!author || !author.isOwner) throw new Error('Unauthorized');
 
   const post = await prisma.post.findUnique({ where: { id: postId } });
   if (!post || post.authorId !== author.id) throw new Error('Not found');
@@ -232,7 +232,7 @@ export async function setGithubRepo(
 
 export async function republishPost(postId: string): Promise<void> {
   const author = await getCurrentAuthor();
-  if (!author) redirect('/sign-in');
+  if (!author || !author.isOwner) redirect('/sign-in');
 
   const post = await prisma.post.findUnique({ where: { id: postId } });
   if (!post || post.authorId !== author.id || post.status !== 'published') return;
@@ -247,7 +247,7 @@ export async function getTags() {
 
 export async function searchAuthorPosts(query: string) {
   const author = await getCurrentAuthor();
-  if (!author) redirect('/sign-in');
+  if (!author || !author.isOwner) redirect('/sign-in');
 
   return prisma.post.findMany({
     where: {
@@ -268,7 +268,7 @@ export async function searchAuthorPosts(query: string) {
 
 export async function publishPost(postId: string): Promise<never> {
   const author = await getCurrentAuthor();
-  if (!author) redirect('/sign-in');
+  if (!author || !author.isOwner) redirect('/sign-in');
 
   const post = await prisma.post.findUnique({ where: { id: postId } });
   if (!post || post.authorId !== author.id) throw new Error('Not found');
@@ -309,7 +309,7 @@ export async function publishPost(postId: string): Promise<never> {
 
 export async function deletePost(postId: string): Promise<never> {
   const author = await getCurrentAuthor();
-  if (!author) redirect('/sign-in');
+  if (!author || !author.isOwner) redirect('/sign-in');
 
   const post = await prisma.post.findUnique({ where: { id: postId } });
   if (!post || post.authorId !== author.id) throw new Error('Not found');
