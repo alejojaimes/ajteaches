@@ -26,12 +26,14 @@ export async function getCurrentAuthor() {
         },
       });
     } else {
+      const userEmail = clerkUser.emailAddresses[0]?.emailAddress;
+      const isOwner = !!process.env.ADMIN_EMAIL && userEmail === process.env.ADMIN_EMAIL;
       author = await prisma.author.create({
         data: {
           clerkUserId: userId,
           name: `${clerkUser.firstName ?? ''} ${clerkUser.lastName ?? ''}`.trim(),
-          email: clerkUser.emailAddresses[0]?.emailAddress,
-          isOwner: true,
+          email: userEmail,
+          isOwner,
         },
       });
     }

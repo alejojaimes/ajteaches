@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { v2 as cloudinary } from 'cloudinary';
+import { getCurrentAuthor } from '@/lib/auth/get-current-author';
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -24,6 +25,11 @@ export async function POST(req: NextRequest) {
   const file = formData.get('file') as File | null;
   if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 });
   const scope = (formData.get('scope') as string | null)?.trim();
+
+  if (scope !== 'avatar') {
+    const author = await getCurrentAuthor();
+    if (!author?.isOwner) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
 
   const maxBytes = 10 * 1024 * 1024;
   if (file.size > maxBytes) {

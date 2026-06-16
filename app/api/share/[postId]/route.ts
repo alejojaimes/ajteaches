@@ -9,7 +9,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pos
 
   const { postId } = await params;
   const author = await getCurrentAuthor();
-  if (!author) return NextResponse.json({ error: 'Author not found' }, { status: 403 });
+  if (!author || !author.isOwner) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const post = await prisma.post.findUnique({ where: { id: postId, deletedAt: null } });
   if (!post || post.authorId !== author.id) {

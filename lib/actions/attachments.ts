@@ -16,7 +16,7 @@ export async function addAttachment(
   data: { url: string; filename: string; mimeType: string; sizeBytes: number }
 ): Promise<{ ok: true; id: string }> {
   const author = await getCurrentAuthor();
-  if (!author) throw new Error('Unauthorized');
+  if (!author || !author.isOwner) throw new Error('Unauthorized');
 
   const post = await prisma.post.findUnique({ where: { id: postId } });
   if (!post || post.authorId !== author.id) throw new Error('Not found');
@@ -38,7 +38,7 @@ export async function addAttachment(
 
 export async function removeAttachment(attachmentId: string): Promise<{ ok: true }> {
   const author = await getCurrentAuthor();
-  if (!author) throw new Error('Unauthorized');
+  if (!author || !author.isOwner) throw new Error('Unauthorized');
 
   const attachment = await prisma.postAttachment.findUnique({
     where: { id: attachmentId },
