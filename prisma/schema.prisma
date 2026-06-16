@@ -205,3 +205,10 @@ model SavedPost {
   @@index([postId])
   @@index([readerId])
 }
+
+model EmailTemplate {
+  key       String   @id
+  subject   String
+  bodyHtml  String
+  updatedAt DateTime @updatedAt
+}
