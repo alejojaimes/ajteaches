@@ -5,7 +5,7 @@ import { getCurrentAuthor } from '@/lib/auth/get-current-author';
 
 export default async function OwnerLayout({ children }: { children: React.ReactNode }) {
   const author = await getCurrentAuthor();
-  if (!author) redirect('/sign-in');
+  if (!author || !author.isOwner) redirect('/sign-in');
 
   return (
     <>
