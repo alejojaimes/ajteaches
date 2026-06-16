@@ -48,6 +48,41 @@ export async function createCollection(
   });
 }
 
+export async function renameCollection(id: string, name: string): Promise<CollectionListItem> {
+  const author = await getCurrentAuthor();
+  if (!author || !author.isOwner) throw new Error('Unauthorized');
+
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error('Collection name is required');
+
+  const base = slugify(trimmed) || `collection-${Date.now()}`;
+  const existing = await prisma.collection.findFirst({ where: { slug: base, NOT: { id } } });
+  const slug = existing ? `${base}-${Date.now().toString(36)}` : base;
+
+  const updated = await prisma.collection.update({
+    where: { id },
+    data: { name: trimmed, slug },
+    select: { id: true, name: true, slug: true, parentId: true },
+  });
+
+  revalidatePath('/');
+  revalidatePath('/feed/collections');
+  return updated;
+}
+
+export async function deleteCollection(id: string): Promise<{ ok: true }> {
+  const author = await getCurrentAuthor();
+  if (!author || !author.isOwner) throw new Error('Unauthorized');
+
+  await prisma.post.updateMany({ where: { collectionId: id }, data: { collectionId: null } });
+  await prisma.collection.updateMany({ where: { parentId: id }, data: { parentId: null } });
+  await prisma.collection.delete({ where: { id } });
+
+  revalidatePath('/');
+  revalidatePath('/feed/collections');
+  return { ok: true };
+}
+
 export async function setPostCollection(
   postId: string,
   collectionId: string | null
