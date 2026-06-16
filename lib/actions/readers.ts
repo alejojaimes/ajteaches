@@ -71,7 +71,7 @@ export async function sendEmailToReaders(
   message: string
 ): Promise<{ ok: true; sent: number } | { ok: false; error: string }> {
   const author = await getCurrentAuthor();
-  if (!author) return { ok: false, error: 'Unauthorized' };
+  if (!author || !author.isOwner) return { ok: false, error: 'Unauthorized' };
 
   if (!subject.trim() || !message.trim()) {
     return { ok: false, error: 'Subject and message are required' };
