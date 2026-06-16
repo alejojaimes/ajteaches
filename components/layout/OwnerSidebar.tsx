@@ -11,6 +11,7 @@ import {
   User,
   LogOut,
   FolderTree,
+  Mail,
 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { href: '/comments', label: 'Comments', icon: MessageCircle },
   { href: '/users', label: 'Users', icon: Users },
   { href: '/collections', label: 'Collections', icon: FolderTree },
+  { href: '/email-templates', label: 'Email templates', icon: Mail },
   { href: '/profile', label: 'Profile', icon: User },
 ];
 
