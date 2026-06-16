@@ -2,6 +2,7 @@ import { auth, currentUser } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db/client';
 import { getResendClient, getFromEmail } from '@/lib/email/client';
 import { renderWelcomeEmail } from '@/lib/email/templates/welcome';
+import { renderDbTemplate } from '@/lib/email/render-db-template';
 
 export async function getCurrentReader() {
   const { userId } = await auth();
@@ -34,7 +35,10 @@ export async function getCurrentReader() {
   if (email) {
     const resend = getResendClient();
     if (resend) {
-      const { subject, html } = renderWelcomeEmail({ name });
+      const dbTemplate = await prisma.emailTemplate.findUnique({ where: { key: 'welcome' } });
+      const { subject, html } = dbTemplate
+        ? renderDbTemplate(dbTemplate.subject, dbTemplate.bodyHtml, { name })
+        : renderWelcomeEmail({ name });
       resend.emails
         .send({ from: getFromEmail(), to: email, subject, html })
         .catch((err: unknown) => console.error('Failed to send welcome email', err));
