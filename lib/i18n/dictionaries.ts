@@ -42,7 +42,7 @@ const es: Dictionary = {
   nav: {
     blog: 'Blog',
     tutorials: 'Tutoriales',
-    about: 'Acerca de',
+    about: 'Autor',
     signIn: 'Iniciar sesión',
     account: 'Mi cuenta',
   },
@@ -84,7 +84,7 @@ const en: Dictionary = {
   nav: {
     blog: 'Blog',
     tutorials: 'Tutorials',
-    about: 'About',
+    about: 'Author',
     signIn: 'Sign in',
     account: 'Account',
   },

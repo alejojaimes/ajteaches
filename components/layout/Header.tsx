@@ -5,7 +5,11 @@ import { HeaderNav } from './HeaderNav';
 
 export async function Header() {
   const [owner, reader, t] = await Promise.all([
-    prisma.author.findFirst({ where: { isOwner: true }, select: { username: true } }),
+    prisma.author.findFirst({
+      where: { username: { not: null } },
+      orderBy: { isOwner: 'desc' },
+      select: { username: true },
+    }),
     getCurrentReader(),
     getServerDictionary(),
   ]);
