@@ -3,7 +3,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export function SearchBar({ initialQuery = '' }: { initialQuery?: string }) {
+type Props = {
+  initialQuery?: string;
+  placeholder?: string;
+  className?: string;
+};
+
+export function SearchBar({
+  initialQuery = '',
+  placeholder = 'Buscar posts, tutoriales, tags…',
+  className = 'mx-auto mb-8 w-full max-w-md',
+}: Props) {
   const [value, setValue] = useState(initialQuery);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -18,6 +28,7 @@ export function SearchBar({ initialQuery = '' }: { initialQuery?: string }) {
       } else {
         params.delete('q');
       }
+      params.delete('page');
       router.replace(`?${params.toString()}`, { scroll: false });
     },
     [router, searchParams]
@@ -43,7 +54,7 @@ export function SearchBar({ initialQuery = '' }: { initialQuery?: string }) {
   }, []);
 
   return (
-    <div className="relative mx-auto mb-8 w-full max-w-md">
+    <div className={`relative ${className}`}>
       <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
         <svg
           width="16"
@@ -62,7 +73,7 @@ export function SearchBar({ initialQuery = '' }: { initialQuery?: string }) {
         type="text"
         value={value}
         onChange={handleChange}
-        placeholder="Buscar posts, tutoriales, tags…"
+        placeholder={placeholder}
         className="border-border bg-card text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/20 w-full rounded-xl border py-2.5 pr-9 pl-9 text-sm transition-all outline-none focus:ring-2"
       />
       {value && (

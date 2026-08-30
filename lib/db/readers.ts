@@ -10,18 +10,33 @@ export type ReaderListItem = {
   createdAt: Date;
 };
 
-export const READERS_PAGE_SIZE = 20;
+export const READERS_PAGE_SIZE_OPTIONS = [5, 10, 20, 50] as const;
+export const DEFAULT_READERS_PAGE_SIZE = 5;
+
+function readersSearchWhere(query?: string) {
+  if (!query) return {};
+  return {
+    OR: [
+      { name: { contains: query, mode: 'insensitive' as const } },
+      { email: { contains: query, mode: 'insensitive' as const } },
+    ],
+  };
+}
 
 export async function getReaders(
-  page: number
+  page: number,
+  pageSize: number = DEFAULT_READERS_PAGE_SIZE,
+  query?: string
 ): Promise<{ readers: ReaderListItem[]; hasMore: boolean; total: number }> {
-  const skip = (page - 1) * READERS_PAGE_SIZE;
+  const skip = (page - 1) * pageSize;
+  const where = readersSearchWhere(query);
 
   const [readers, total] = await Promise.all([
     prisma.reader.findMany({
+      where,
       orderBy: { createdAt: 'desc' },
       skip,
-      take: READERS_PAGE_SIZE,
+      take: pageSize,
       select: {
         id: true,
         name: true,
@@ -31,7 +46,7 @@ export async function getReaders(
         createdAt: true,
       },
     }),
-    prisma.reader.count(),
+    prisma.reader.count({ where }),
   ]);
 
   return { readers, hasMore: skip + readers.length < total, total };
