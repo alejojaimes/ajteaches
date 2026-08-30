@@ -40,7 +40,7 @@ export async function notifyReadersOnPostPublished(post: PublishedPost): Promise
   const from = getFromEmail();
 
   for (const batch of chunk(readers, BATCH_SIZE)) {
-    await resend.batch.send(
+    const { error } = await resend.batch.send(
       batch.map(({ email }) => ({
         from,
         to: email!,
@@ -48,5 +48,6 @@ export async function notifyReadersOnPostPublished(post: PublishedPost): Promise
         html,
       }))
     );
+    if (error) throw new Error(error.message);
   }
 }

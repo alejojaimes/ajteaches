@@ -111,7 +111,7 @@ export async function sendEmailToReaders(
   const from = getFromEmail();
 
   for (const batch of chunk(readers, SEND_BATCH_SIZE)) {
-    await resend.batch.send(
+    const { error } = await resend.batch.send(
       batch.map(({ email }) => ({
         from,
         to: email!,
@@ -119,7 +119,59 @@ export async function sendEmailToReaders(
         html,
       }))
     );
+    if (error) return { ok: false, error: error.message };
   }
 
   return { ok: true, sent: readers.length };
+}
+
+/** Render an ad-hoc admin message exactly as it will be sent. */
+export async function previewAdminMessage(
+  subject: string,
+  message: string
+): Promise<{ html: string }> {
+  const author = await getCurrentAuthor();
+  if (!author || !author.isOwner) throw new Error('Unauthorized');
+
+  const { html } = renderAdminMessageEmail({
+    subject,
+    messageHtml: message,
+    authorName: author.name,
+  });
+  return { html };
+}
+
+/** Send an ad-hoc admin message to a single address so the owner can check how it lands. */
+export async function sendTestAdminMessage(
+  subject: string,
+  message: string,
+  to: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const author = await getCurrentAuthor();
+  if (!author || !author.isOwner) return { ok: false, error: 'Unauthorized' };
+
+  const trimmedTo = to.trim();
+  if (!trimmedTo) return { ok: false, error: 'Recipient email is required' };
+  if (!subject.trim() || !message.trim()) {
+    return { ok: false, error: 'Subject and message are required' };
+  }
+
+  const resend = getResendClient();
+  if (!resend) return { ok: false, error: 'Email is not configured' };
+
+  const { html } = renderAdminMessageEmail({
+    subject,
+    messageHtml: message,
+    authorName: author.name,
+  });
+
+  const { error } = await resend.emails.send({
+    from: getFromEmail(),
+    to: trimmedTo,
+    subject: `[Test] ${subject}`,
+    html,
+  });
+  if (error) return { ok: false, error: error.message };
+
+  return { ok: true };
 }

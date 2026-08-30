@@ -4,12 +4,24 @@ import { useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import { StarterKit } from '@tiptap/starter-kit';
 import { Link } from '@tiptap/extension-link';
-import { ChevronDown, ChevronUp, Save, CheckCircle2, Plus, Trash2 } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronUp,
+  Save,
+  CheckCircle2,
+  Plus,
+  Trash2,
+  Eye,
+  Send,
+  X,
+} from 'lucide-react';
 import {
   upsertEmailTemplate,
   createEmailTemplate,
   updateEmailTemplate,
   deleteEmailTemplate,
+  previewEmailTemplate,
+  sendTestEmailTemplate,
 } from '@/lib/actions/email-templates';
 
 type PredefinedEntry = {
@@ -33,9 +45,10 @@ type CustomEntry = {
 type Props = {
   predefined: PredefinedEntry[];
   custom: CustomEntry[];
+  ownerEmail: string | null;
 };
 
-export function EmailTemplatesEditor({ predefined, custom }: Props) {
+export function EmailTemplatesEditor({ predefined, custom, ownerEmail }: Props) {
   const [openKey, setOpenKey] = useState<string | null>(predefined[0]?.key ?? null);
   const [customTemplates, setCustomTemplates] = useState<CustomEntry[]>(custom);
   const [creating, setCreating] = useState(false);
@@ -55,6 +68,7 @@ export function EmailTemplatesEditor({ predefined, custom }: Props) {
               template={t}
               isOpen={openKey === t.key}
               onToggle={() => toggle(t.key)}
+              ownerEmail={ownerEmail}
             />
           ))}
         </div>
@@ -85,6 +99,7 @@ export function EmailTemplatesEditor({ predefined, custom }: Props) {
               setOpenKey(t.key);
             }}
             onCancel={() => setCreating(false)}
+            ownerEmail={ownerEmail}
           />
         )}
 
@@ -96,6 +111,7 @@ export function EmailTemplatesEditor({ predefined, custom }: Props) {
               isOpen={openKey === t.key}
               onToggle={() => toggle(t.key)}
               onDeleted={() => setCustomTemplates((prev) => prev.filter((c) => c.key !== t.key))}
+              ownerEmail={ownerEmail}
             />
           ))}
           {customTemplates.length === 0 && !creating && (
@@ -192,16 +208,157 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
 const editorClass =
   'prose prose-sm max-w-none min-h-[160px] px-3 py-3 text-sm text-foreground focus:outline-none';
 
+/* ─── preview + test send (shared by all card types) ────── */
+
+function PreviewAndTestSend({
+  subject,
+  getBodyHtml,
+  disabled,
+  ownerEmail,
+}: {
+  subject: string;
+  getBodyHtml: () => string;
+  disabled: boolean;
+  ownerEmail: string | null;
+}) {
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState('');
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+
+  const [testOpen, setTestOpen] = useState(false);
+  const [testEmail, setTestEmail] = useState(ownerEmail ?? '');
+  const [testSending, setTestSending] = useState(false);
+  const [testSent, setTestSent] = useState(false);
+  const [testError, setTestError] = useState<string | null>(null);
+
+  const openPreview = async () => {
+    setPreviewLoading(true);
+    setPreviewError(null);
+    try {
+      const { html } = await previewEmailTemplate(subject, getBodyHtml());
+      setPreviewHtml(html);
+      setPreviewOpen(true);
+    } catch (e) {
+      setPreviewError(e instanceof Error ? e.message : 'Failed to render preview');
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const sendTest = async () => {
+    setTestSending(true);
+    setTestError(null);
+    try {
+      const result = await sendTestEmailTemplate(subject, getBodyHtml(), testEmail);
+      if (result.ok) {
+        setTestSent(true);
+        setTimeout(() => setTestSent(false), 2500);
+      } else {
+        setTestError(result.error);
+      }
+    } finally {
+      setTestSending(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          disabled={disabled || previewLoading}
+          onClick={() => void openPreview()}
+          className="border-border text-foreground hover:border-primary hover:text-primary inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
+        >
+          <Eye className="h-3.5 w-3.5" />
+          {previewLoading ? 'Loading…' : 'Preview'}
+        </button>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => setTestOpen((v) => !v)}
+          className="border-border text-foreground hover:border-primary hover:text-primary inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
+        >
+          <Send className="h-3.5 w-3.5" />
+          Send test
+        </button>
+      </div>
+
+      {previewError && <p className="text-destructive text-xs">{previewError}</p>}
+
+      {testOpen && (
+        <div className="flex items-center gap-2">
+          <input
+            type="email"
+            value={testEmail}
+            onChange={(e) => setTestEmail(e.target.value)}
+            placeholder="you@example.com"
+            className="border-border text-foreground focus:ring-primary flex-1 rounded-md border bg-transparent px-3 py-1.5 text-xs outline-none focus:ring-1"
+          />
+          <button
+            type="button"
+            disabled={testSending || disabled || !testEmail.trim()}
+            onClick={() => void sendTest()}
+            className="bg-primary hover:bg-primary-hover rounded-md px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+          >
+            {testSending ? 'Sending…' : 'Send'}
+          </button>
+          {testSent && (
+            <span className="text-primary flex items-center gap-1 text-xs font-medium">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Sent
+            </span>
+          )}
+        </div>
+      )}
+      {testError && <p className="text-destructive text-xs">{testError}</p>}
+
+      {previewOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          onClick={() => setPreviewOpen(false)}
+        >
+          <div
+            className="border-border bg-card mx-4 w-full max-w-lg rounded-2xl border p-5 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-foreground text-sm font-semibold">Preview</p>
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={() => setPreviewOpen(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <iframe
+              srcDoc={previewHtml}
+              sandbox=""
+              title="Email preview"
+              className="h-[420px] w-full rounded-md border bg-white"
+            />
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 /* ─── predefined card ───────────────────────────────────── */
 
 function PredefinedCard({
   template,
   isOpen,
   onToggle,
+  ownerEmail,
 }: {
   template: PredefinedEntry;
   isOpen: boolean;
   onToggle: () => void;
+  ownerEmail: string | null;
 }) {
   const [subject, setSubject] = useState(template.subject);
   const [saving, setSaving] = useState(false);
@@ -276,6 +433,12 @@ function PredefinedCard({
               insert the reader&apos;s name.
             </p>
           </div>
+          <PreviewAndTestSend
+            subject={subject}
+            getBodyHtml={() => editor?.getHTML() ?? ''}
+            disabled={!subject.trim() || !editor || editor.isEmpty}
+            ownerEmail={ownerEmail}
+          />
           {error && <p className="text-destructive text-xs">{error}</p>}
           <div className="flex items-center justify-end gap-3">
             {saved && (
@@ -307,11 +470,13 @@ function CustomCard({
   isOpen,
   onToggle,
   onDeleted,
+  ownerEmail,
 }: {
   template: CustomEntry;
   isOpen: boolean;
   onToggle: () => void;
   onDeleted: () => void;
+  ownerEmail: string | null;
 }) {
   const [name, setName] = useState(template.name);
   const [subject, setSubject] = useState(template.subject);
@@ -403,6 +568,12 @@ function CustomCard({
               insert the reader&apos;s name.
             </p>
           </div>
+          <PreviewAndTestSend
+            subject={subject}
+            getBodyHtml={() => editor?.getHTML() ?? ''}
+            disabled={!subject.trim() || !editor || editor.isEmpty}
+            ownerEmail={ownerEmail}
+          />
           {error && <p className="text-destructive text-xs">{error}</p>}
           <div className="flex items-center justify-between">
             <button
@@ -443,9 +614,11 @@ function CustomCard({
 function CreateTemplateCard({
   onCreated,
   onCancel,
+  ownerEmail,
 }: {
   onCreated: (t: CustomEntry) => void;
   onCancel: () => void;
+  ownerEmail: string | null;
 }) {
   const [name, setName] = useState('');
   const [subject, setSubject] = useState('');
@@ -511,6 +684,12 @@ function CreateTemplateCard({
           insert the reader&apos;s name.
         </p>
       </div>
+      <PreviewAndTestSend
+        subject={subject}
+        getBodyHtml={() => editor?.getHTML() ?? ''}
+        disabled={!subject.trim() || !editor || editor.isEmpty}
+        ownerEmail={ownerEmail}
+      />
       {error && <p className="text-destructive text-xs">{error}</p>}
       <div className="flex items-center justify-end gap-3">
         <button

@@ -35,7 +35,7 @@ export default async function UsersPage({ searchParams }: Props) {
         </p>
       </header>
 
-      <UsersList readers={readers} templates={templates} />
+      <UsersList readers={readers} templates={templates} ownerEmail={author.email} />
 
       {hasMore && (
         <div className="mt-8 flex justify-center">

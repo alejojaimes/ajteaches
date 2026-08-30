@@ -1,4 +1,5 @@
 import { getEmailTemplates } from '@/lib/actions/email-templates';
+import { getCurrentAuthor } from '@/lib/auth/get-current-author';
 import { EmailTemplatesEditor } from '@/components/owner/EmailTemplatesEditor';
 import { renderWelcomeEmail } from '@/lib/email/templates/welcome';
 import { renderNewsletterOptInEmail } from '@/lib/email/templates/newsletter-optin';
@@ -22,7 +23,7 @@ const TEMPLATE_DEFINITIONS = [
 ];
 
 export default async function EmailTemplatesPage() {
-  const saved = await getEmailTemplates();
+  const [saved, author] = await Promise.all([getEmailTemplates(), getCurrentAuthor()]);
   const savedMap = new Map(saved.map((t) => [t.key, t]));
 
   const predefined = TEMPLATE_DEFINITIONS.map((def) => ({
@@ -57,7 +58,11 @@ export default async function EmailTemplatesPage() {
           to insert the reader&apos;s name.
         </p>
       </div>
-      <EmailTemplatesEditor predefined={predefined} custom={custom} />
+      <EmailTemplatesEditor
+        predefined={predefined}
+        custom={custom}
+        ownerEmail={author?.email ?? null}
+      />
     </div>
   );
 }
