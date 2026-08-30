@@ -35,6 +35,7 @@ export type Dictionary = {
   };
   toc: {
     title: string;
+    openLabel: string;
   };
 };
 
@@ -77,6 +78,7 @@ const es: Dictionary = {
   },
   toc: {
     title: 'En esta página',
+    openLabel: 'Abrir índice de contenidos',
   },
 };
 
@@ -118,6 +120,7 @@ const en: Dictionary = {
   },
   toc: {
     title: 'On this page',
+    openLabel: 'Open table of contents',
   },
 };
 
