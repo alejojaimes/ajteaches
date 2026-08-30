@@ -3,8 +3,11 @@
 import { revalidatePath } from 'next/cache';
 import { getCurrentAuthor } from '@/lib/auth/get-current-author';
 import { prisma } from '@/lib/db/client';
+import { getResendClient, getFromEmail } from '@/lib/email/client';
+import { renderDbTemplate } from '@/lib/email/render-db-template';
 
 const PREDEFINED_KEYS = new Set(['welcome', 'newsletter_optin']);
+const SAMPLE_READER_NAME = 'Sample Reader';
 
 export type EmailTemplateItem = {
   key: string;
@@ -90,6 +93,50 @@ export async function updateEmailTemplate(
   });
 
   revalidatePath('/email-templates');
+  return { ok: true };
+}
+
+/** Render a template with sample data, exactly as it will be sent. */
+export async function previewEmailTemplate(
+  subject: string,
+  bodyHtml: string
+): Promise<{ subject: string; html: string }> {
+  const author = await getCurrentAuthor();
+  if (!author || !author.isOwner) throw new Error('Unauthorized');
+
+  return renderDbTemplate(subject, bodyHtml, { name: SAMPLE_READER_NAME });
+}
+
+/** Send this template to a single address so the owner can check how it lands. */
+export async function sendTestEmailTemplate(
+  subject: string,
+  bodyHtml: string,
+  to: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const author = await getCurrentAuthor();
+  if (!author || !author.isOwner) return { ok: false, error: 'Unauthorized' };
+
+  const trimmedTo = to.trim();
+  if (!trimmedTo) return { ok: false, error: 'Recipient email is required' };
+  if (!subject.trim() || !bodyHtml.trim()) {
+    return { ok: false, error: 'Subject and body are required' };
+  }
+
+  const resend = getResendClient();
+  if (!resend) return { ok: false, error: 'Email is not configured' };
+
+  const { subject: resolvedSubject, html } = renderDbTemplate(subject, bodyHtml, {
+    name: SAMPLE_READER_NAME,
+  });
+
+  const { error } = await resend.emails.send({
+    from: getFromEmail(),
+    to: trimmedTo,
+    subject: `[Test] ${resolvedSubject}`,
+    html,
+  });
+  if (error) return { ok: false, error: error.message };
+
   return { ok: true };
 }
 

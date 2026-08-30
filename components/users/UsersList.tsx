@@ -3,10 +3,14 @@
 import { useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import { StarterKit } from '@tiptap/starter-kit';
-import { Copy, Check, Mail, ChevronDown } from 'lucide-react';
+import { Copy, Check, Mail, ChevronDown, Eye, Send, CheckCircle2, X } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getInitials } from '@/lib/utils';
-import { sendEmailToReaders } from '@/lib/actions/readers';
+import {
+  sendEmailToReaders,
+  previewAdminMessage,
+  sendTestAdminMessage,
+} from '@/lib/actions/readers';
 import type { ReaderListItem } from '@/lib/db/readers';
 import type { EmailTemplateItem } from '@/lib/actions/email-templates';
 
@@ -19,9 +23,10 @@ const dateFormatter = new Intl.DateTimeFormat('en-US', {
 type Props = {
   readers: ReaderListItem[];
   templates: EmailTemplateItem[];
+  ownerEmail: string | null;
 };
 
-export function UsersList({ readers, templates }: Props) {
+export function UsersList({ readers, templates, ownerEmail }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [composeOpen, setComposeOpen] = useState(false);
@@ -125,6 +130,7 @@ export function UsersList({ readers, templates }: Props) {
         <ComposeEmailDialog
           selectedReaders={readers.filter((r) => selected.has(r.id))}
           templates={templates}
+          ownerEmail={ownerEmail}
           onClose={() => setComposeOpen(false)}
         />
       )}
@@ -135,10 +141,12 @@ export function UsersList({ readers, templates }: Props) {
 function ComposeEmailDialog({
   selectedReaders,
   templates,
+  ownerEmail,
   onClose,
 }: {
   selectedReaders: ReaderListItem[];
   templates: EmailTemplateItem[];
+  ownerEmail: string | null;
   onClose: () => void;
 }) {
   const [subject, setSubject] = useState('');
@@ -146,6 +154,17 @@ function ComposeEmailDialog({
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState<number | null>(null);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState('');
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+
+  const [testOpen, setTestOpen] = useState(false);
+  const [testEmail, setTestEmail] = useState(ownerEmail ?? '');
+  const [testSending, setTestSending] = useState(false);
+  const [testSent, setTestSent] = useState(false);
+  const [testError, setTestError] = useState<string | null>(null);
 
   const editor = useEditor({
     extensions: [StarterKit],
@@ -190,6 +209,40 @@ function ComposeEmailDialog({
       setSending(false);
     }
   };
+
+  const openPreview = async () => {
+    if (!editor) return;
+    setPreviewLoading(true);
+    setPreviewError(null);
+    try {
+      const { html } = await previewAdminMessage(subject, editor.getHTML());
+      setPreviewHtml(html);
+      setPreviewOpen(true);
+    } catch (e) {
+      setPreviewError(e instanceof Error ? e.message : 'Failed to render preview');
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const sendTest = async () => {
+    if (!editor) return;
+    setTestSending(true);
+    setTestError(null);
+    try {
+      const result = await sendTestAdminMessage(subject, editor.getHTML(), testEmail);
+      if (result.ok) {
+        setTestSent(true);
+        setTimeout(() => setTestSent(false), 2500);
+      } else {
+        setTestError(result.error);
+      }
+    } finally {
+      setTestSending(false);
+    }
+  };
+
+  const noContent = !subject.trim() || !editor || editor.isEmpty;
 
   return (
     <div
@@ -313,6 +366,56 @@ function ComposeEmailDialog({
                 <EditorContent editor={editor} />
               </div>
             </div>
+
+            <div className="mt-3 flex items-center gap-2">
+              <button
+                type="button"
+                disabled={noContent || previewLoading}
+                onClick={() => void openPreview()}
+                className="border-border text-foreground hover:border-primary hover:text-primary inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
+              >
+                <Eye className="h-3.5 w-3.5" />
+                {previewLoading ? 'Loading…' : 'Preview'}
+              </button>
+              <button
+                type="button"
+                disabled={noContent}
+                onClick={() => setTestOpen((v) => !v)}
+                className="border-border text-foreground hover:border-primary hover:text-primary inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
+              >
+                <Send className="h-3.5 w-3.5" />
+                Send test
+              </button>
+            </div>
+            {previewError && <p className="text-destructive mt-1 text-xs">{previewError}</p>}
+
+            {testOpen && (
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  type="email"
+                  value={testEmail}
+                  onChange={(e) => setTestEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="border-border text-foreground focus:ring-primary flex-1 rounded-md border bg-transparent px-3 py-1.5 text-xs outline-none focus:ring-1"
+                />
+                <button
+                  type="button"
+                  disabled={testSending || noContent || !testEmail.trim()}
+                  onClick={() => void sendTest()}
+                  className="bg-primary hover:bg-primary-hover rounded-md px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+                >
+                  {testSending ? 'Sending…' : 'Send'}
+                </button>
+                {testSent && (
+                  <span className="text-primary flex items-center gap-1 text-xs font-medium">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Sent
+                  </span>
+                )}
+              </div>
+            )}
+            {testError && <p className="text-destructive mt-1 text-xs">{testError}</p>}
+
             {error && <p className="text-destructive mt-2 text-xs">{error}</p>}
             <div className="mt-4 flex justify-end gap-2">
               <button
@@ -324,7 +427,7 @@ function ComposeEmailDialog({
               </button>
               <button
                 type="button"
-                disabled={sending || !subject.trim() || !editor || editor.isEmpty}
+                disabled={sending || noContent}
                 onClick={() => void send()}
                 className="rounded-button bg-primary hover:bg-primary-hover px-4 py-2 text-sm font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -332,6 +435,36 @@ function ComposeEmailDialog({
               </button>
             </div>
           </>
+        )}
+
+        {previewOpen && (
+          <div
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+            onClick={() => setPreviewOpen(false)}
+          >
+            <div
+              className="border-border bg-card mx-4 w-full max-w-lg rounded-2xl border p-5 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-foreground text-sm font-semibold">Preview</p>
+                <button
+                  type="button"
+                  aria-label="Close"
+                  onClick={() => setPreviewOpen(false)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <iframe
+                srcDoc={previewHtml}
+                sandbox=""
+                title="Email preview"
+                className="h-[420px] w-full rounded-md border bg-white"
+              />
+            </div>
+          </div>
         )}
       </div>
     </div>
