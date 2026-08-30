@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { prisma } from '@/lib/db/client';
 import { getCurrentReader } from '@/lib/auth/get-current-reader';
 import { getServerDictionary } from '@/lib/i18n/get-locale';
@@ -21,11 +22,13 @@ export async function Header() {
   ];
 
   return (
-    <HeaderNav
-      links={links}
-      reader={reader ? { name: reader.name, avatar: reader.avatar } : null}
-      signInLabel={t.nav.signIn}
-      accountLabel={t.nav.account}
-    />
+    <Suspense fallback={null}>
+      <HeaderNav
+        links={links}
+        reader={reader ? { name: reader.name, avatar: reader.avatar } : null}
+        signInLabel={t.nav.signIn}
+        accountLabel={t.nav.account}
+      />
+    </Suspense>
   );
 }

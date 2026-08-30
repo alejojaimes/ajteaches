@@ -41,6 +41,13 @@ export type Dictionary = {
     badge: string;
     cta: string;
   };
+  contentMode: {
+    blogTitle: string;
+    blogSubtitle: string;
+    tutorialTitle: string;
+    tutorialSubtitle: string;
+    collectionPostCount: (count: number) => string;
+  };
 };
 
 const es: Dictionary = {
@@ -88,6 +95,13 @@ const es: Dictionary = {
     badge: 'Repositorio de GitHub',
     cta: 'Ver en GitHub',
   },
+  contentMode: {
+    blogTitle: 'Blog',
+    blogSubtitle: 'Notas de ingeniería, opiniones técnicas y aprendizajes del día a día.',
+    tutorialTitle: 'Tutoriales',
+    tutorialSubtitle: 'Guías paso a paso para construir y entender proyectos reales.',
+    collectionPostCount: (count) => `${count} post${count === 1 ? '' : 's'}`,
+  },
 };
 
 const en: Dictionary = {
@@ -133,6 +147,13 @@ const en: Dictionary = {
   githubRepo: {
     badge: 'GitHub Repository',
     cta: 'View on GitHub',
+  },
+  contentMode: {
+    blogTitle: 'Blog',
+    blogSubtitle: 'Engineering notes, technical opinions, and everyday lessons.',
+    tutorialTitle: 'Tutorials',
+    tutorialSubtitle: 'Step-by-step guides to build and understand real projects.',
+    collectionPostCount: (count) => `${count} post${count === 1 ? '' : 's'}`,
   },
 };
 

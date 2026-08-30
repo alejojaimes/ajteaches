@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -19,14 +19,18 @@ type Props = {
   accountLabel: string;
 };
 
-function isActive(href: string, pathname: string): boolean {
-  const [hrefPath] = href.split('?');
-  if (hrefPath === '/') return pathname === '/';
-  return hrefPath === pathname;
+function isActive(href: string, pathname: string, currentType: string | null): boolean {
+  const [hrefPath, hrefQuery] = href.split('?');
+  if (hrefPath !== '/') return hrefPath === pathname;
+  if (pathname !== '/') return false;
+  const hrefType = new URLSearchParams(hrefQuery ?? '').get('type');
+  return hrefType === currentType;
 }
 
 export function HeaderNav({ links, reader, signInLabel, accountLabel }: Props) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentType = searchParams.get('type');
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -41,7 +45,7 @@ export function HeaderNav({ links, reader, signInLabel, accountLabel }: Props) {
 
         <nav className="hidden items-center gap-1 md:flex">
           {links.map((link) => {
-            const active = isActive(link.href, pathname);
+            const active = isActive(link.href, pathname, currentType);
             return (
               <Link
                 key={link.href}
@@ -120,7 +124,7 @@ export function HeaderNav({ links, reader, signInLabel, accountLabel }: Props) {
                   href={link.href}
                   onClick={() => setMenuOpen(false)}
                   className={`rounded-md px-3 py-2 text-sm ${
-                    isActive(link.href, pathname)
+                    isActive(link.href, pathname, currentType)
                       ? 'bg-primary-soft text-primary font-medium'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                   }`}
