@@ -25,9 +25,16 @@ type Props = {
   templates: EmailTemplateItem[];
   ownerEmail: string | null;
   noEmailCount: number;
+  searchActive?: boolean;
 };
 
-export function UsersList({ readers, templates, ownerEmail, noEmailCount }: Props) {
+export function UsersList({
+  readers,
+  templates,
+  ownerEmail,
+  noEmailCount,
+  searchActive = false,
+}: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [composeOpen, setComposeOpen] = useState(false);
@@ -131,7 +138,9 @@ export function UsersList({ readers, templates, ownerEmail, noEmailCount }: Prop
           </div>
         ))}
         {readers.length === 0 && (
-          <p className="text-muted-foreground p-6 text-center text-sm">No users yet.</p>
+          <p className="text-muted-foreground p-6 text-center text-sm">
+            {searchActive ? 'No users match your search.' : 'No users yet.'}
+          </p>
         )}
       </div>
 
