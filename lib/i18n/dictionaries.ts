@@ -37,6 +37,10 @@ export type Dictionary = {
     title: string;
     openLabel: string;
   };
+  githubRepo: {
+    badge: string;
+    cta: string;
+  };
 };
 
 const es: Dictionary = {
@@ -80,6 +84,10 @@ const es: Dictionary = {
     title: 'En esta página',
     openLabel: 'Abrir índice de contenidos',
   },
+  githubRepo: {
+    badge: 'Repositorio de GitHub',
+    cta: 'Ver en GitHub',
+  },
 };
 
 const en: Dictionary = {
@@ -121,6 +129,10 @@ const en: Dictionary = {
   toc: {
     title: 'On this page',
     openLabel: 'Open table of contents',
+  },
+  githubRepo: {
+    badge: 'GitHub Repository',
+    cta: 'View on GitHub',
   },
 };
 
