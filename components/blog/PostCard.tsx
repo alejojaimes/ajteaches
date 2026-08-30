@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Newspaper, Code2 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getInitials } from '@/lib/utils';
 import { BookmarkButton } from './BookmarkButton';
@@ -39,28 +40,32 @@ export function PostCard({ post, initialSaved = false }: Props) {
   return (
     <Link href={`/posts/${post.slug}`} className="block">
       <article className="rounded-card border-border bg-card border p-6 transition hover:-translate-y-0.5 hover:shadow-md">
-        {/* Top row: badges + bookmark */}
+        {/* Top row: type + badges + bookmark */}
         <div className="mb-3 flex items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-1">
-            {post.collection && (
-              <span className="rounded-badge bg-accent/10 text-accent px-2 py-1 text-xs font-semibold">
-                {post.collection.name}
-              </span>
-            )}
-            {(post.tags ?? []).length > 0 ? (
-              (post.tags ?? []).map((tag) => (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-muted-foreground flex shrink-0 items-center gap-1 text-xs font-medium">
+              {post.postType === 'tutorial' ? (
+                <Code2 className="h-3.5 w-3.5" />
+              ) : (
+                <Newspaper className="h-3.5 w-3.5" />
+              )}
+              {post.postType === 'tutorial' ? 'Tutorial' : 'Blog'}
+            </span>
+            <div className="flex flex-wrap items-center gap-1">
+              {post.collection && (
+                <span className="rounded-badge bg-accent/10 text-accent px-2 py-1 text-xs font-semibold">
+                  {post.collection.name}
+                </span>
+              )}
+              {(post.tags ?? []).map((tag) => (
                 <span
                   key={tag.id}
                   className="rounded-badge bg-primary-soft text-primary px-2 py-1 text-xs font-semibold"
                 >
                   {tag.name}
                 </span>
-              ))
-            ) : (
-              <span className="rounded-badge bg-primary-soft text-primary px-2 py-1 text-xs font-semibold">
-                {post.postType === 'tutorial' ? 'Tutorial' : 'Blog'}
-              </span>
-            )}
+              ))}
+            </div>
           </div>
           <BookmarkButton postId={post.id} initialSaved={initialSaved} />
         </div>

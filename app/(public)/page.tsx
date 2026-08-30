@@ -2,7 +2,10 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { getPublishedPosts } from '@/lib/db/posts';
 import { getSavedPostIds } from '@/lib/db/saves';
-import { getCollectionWithDescendantIds, getCollectionTree } from '@/lib/db/collections';
+import {
+  getCollectionWithDescendantIds,
+  getTopLevelCollectionsWithCounts,
+} from '@/lib/db/collections';
 import { getCurrentReader } from '@/lib/auth/get-current-reader';
 import { getServerDictionary } from '@/lib/i18n/get-locale';
 import { getFirstContentImage } from '@/lib/render-post';
@@ -28,9 +31,9 @@ export default async function Home({
   const type = isPostType(typeParam) ? typeParam : undefined;
   const query = q?.trim() || undefined;
 
-  const [collectionFilter, collectionTree] = await Promise.all([
+  const [collectionFilter, topLevelCollections] = await Promise.all([
     collectionParam ? getCollectionWithDescendantIds(collectionParam) : null,
-    type === 'tutorial' ? getCollectionTree() : Promise.resolve([]),
+    type === 'tutorial' ? getTopLevelCollectionsWithCounts() : Promise.resolve([]),
   ]);
 
   const [posts, reader, t] = await Promise.all([
@@ -45,8 +48,6 @@ export default async function Home({
       )
     : new Set<string>();
 
-  const topLevelCollections = collectionTree.filter((c) => c.parentId === null);
-
   return (
     <div className="mx-auto max-w-7xl px-4 py-12">
       <section className="relative mb-16 overflow-hidden text-center">
@@ -58,6 +59,17 @@ export default async function Home({
           <p className="text-muted-foreground text-lg">{t.hero.subtitle}</p>
         </Reveal>
       </section>
+
+      {type && (
+        <div className="mb-8 text-center">
+          <h1 className="text-foreground text-2xl font-bold">
+            {type === 'blog' ? t.contentMode.blogTitle : t.contentMode.tutorialTitle}
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {type === 'blog' ? t.contentMode.blogSubtitle : t.contentMode.tutorialSubtitle}
+          </p>
+        </div>
+      )}
 
       <Suspense>
         <SearchBar initialQuery={query ?? ''} />
@@ -75,19 +87,27 @@ export default async function Home({
           >
             {t.hero.allCollections}
           </Link>
-          {topLevelCollections.map((c) => (
-            <Link
-              key={c.id}
-              href={`/?type=tutorial&collection=${c.slug}`}
-              className={`rounded-badge px-3 py-1 text-xs font-semibold transition-colors ${
-                collectionFilter?.collection.id === c.id
-                  ? 'bg-primary text-white'
-                  : 'bg-primary-soft text-primary hover:bg-primary/20'
-              }`}
-            >
-              {c.name}
-            </Link>
-          ))}
+          {topLevelCollections.map((c) => {
+            const active = collectionFilter?.collection.id === c.id;
+            return (
+              <Link
+                key={c.id}
+                href={`/?type=tutorial&collection=${c.slug}`}
+                className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm transition-colors ${
+                  active
+                    ? 'border-primary bg-primary-soft text-primary'
+                    : 'border-border bg-card text-foreground hover:border-primary/50'
+                }`}
+              >
+                <span className="font-semibold">{c.name}</span>
+                <span
+                  className={active ? 'text-primary/70 text-xs' : 'text-muted-foreground text-xs'}
+                >
+                  {t.contentMode.collectionPostCount(c.postCount)}
+                </span>
+              </Link>
+            );
+          })}
         </div>
       )}
 
