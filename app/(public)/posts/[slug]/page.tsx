@@ -69,8 +69,8 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
   const headings = extractHeadings(post.contentJson);
 
   return (
-    <div className="mx-auto max-w-[940px] px-4 py-12 lg:flex lg:items-start lg:gap-10">
-      <article className="mx-auto w-full max-w-[700px] lg:mx-0">
+    <div className="mx-auto max-w-[940px] px-4 py-12">
+      <article className="mx-auto w-full max-w-[700px]">
         <TableOfContents
           headings={headings}
           title={t.toc.title}
@@ -175,9 +175,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
           isSignedIn={!!reader}
         />
       </article>
-      <aside className="hidden w-48 shrink-0 lg:block">
-        <TableOfContents headings={headings} title={t.toc.title} />
-      </aside>
+      <TableOfContents headings={headings} title={t.toc.title} />
       <SubscribePopup isSubscribed={reader?.newsletterOptIn ?? false} />
       <ScrollToTop />
     </div>

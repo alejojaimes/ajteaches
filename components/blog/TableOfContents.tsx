@@ -147,6 +147,54 @@ function MobileTocSheet({
   );
 }
 
+function DesktopTocRail({
+  headings,
+  title,
+  activeId,
+}: {
+  headings: Heading[];
+  title: string;
+  activeId: string | null;
+}) {
+  const activeItemRef = useRef<HTMLAnchorElement | null>(null);
+
+  const scrollPanelToActive = () => {
+    activeItemRef.current?.scrollIntoView({ block: 'center' });
+  };
+
+  return (
+    <nav
+      className="group fixed top-1/2 right-6 z-[60] hidden -translate-y-1/2 lg:block"
+      onMouseEnter={scrollPanelToActive}
+      onFocus={scrollPanelToActive}
+    >
+      <ul className="flex flex-col items-end gap-2 py-2">
+        {headings.map((heading) => {
+          const isActive = activeId === heading.id;
+          return (
+            <li key={heading.id}>
+              <a
+                href={`#${heading.id}`}
+                aria-label={heading.text}
+                className={`block h-1.5 w-1.5 rounded-full transition-colors ${
+                  isActive ? 'bg-primary' : 'bg-border group-hover:bg-muted-foreground/50'
+                }`}
+              />
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="border-border bg-card invisible absolute top-1/2 right-full mr-3 w-56 -translate-y-1/2 rounded-xl border p-4 opacity-0 shadow-lg transition-opacity duration-150 group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
+        <p className="text-foreground mb-3 text-sm font-semibold">{title}</p>
+        <div className="max-h-[60vh] overflow-y-auto">
+          <HeadingList headings={headings} activeId={activeId} activeItemRef={activeItemRef} />
+        </div>
+      </div>
+    </nav>
+  );
+}
+
 export function TableOfContents({ headings, title, variant = 'sidebar', openLabel }: Props) {
   const activeId = useActiveHeading(headings);
 
@@ -163,10 +211,5 @@ export function TableOfContents({ headings, title, variant = 'sidebar', openLabe
     );
   }
 
-  return (
-    <nav className="sticky top-24 hidden max-h-[calc(100vh-7rem)] overflow-y-auto lg:block">
-      <p className="text-foreground mb-3 text-sm font-semibold">{title}</p>
-      <HeadingList headings={headings} activeId={activeId} />
-    </nav>
-  );
+  return <DesktopTocRail headings={headings} title={title} activeId={activeId} />;
 }

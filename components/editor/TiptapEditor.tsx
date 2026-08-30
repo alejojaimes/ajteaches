@@ -18,6 +18,7 @@ import type { EditorView } from '@tiptap/pm/view';
 import type { EditorState } from '@tiptap/pm/state';
 import type { PostType } from '@prisma/client';
 import type { GithubRepoSnapshot } from '@/lib/actions/posts';
+import { extractRepoPath } from '@/components/blog/GithubRepoCard';
 import type { CollectionListItem } from '@/lib/actions/collections';
 import { compressImageFile } from '@/lib/image-compress';
 import { EmbedNode } from '@/lib/extensions/embed';
@@ -1059,6 +1060,11 @@ export function TiptapEditor({
                   <p className="text-foreground truncate text-sm font-medium">
                     {githubRepo.fullName}
                   </p>
+                  {extractRepoPath(githubRepoUrl, githubRepo.fullName) && (
+                    <p className="text-muted-foreground mt-0.5 truncate text-xs">
+                      📁 {extractRepoPath(githubRepoUrl, githubRepo.fullName)}
+                    </p>
+                  )}
                   {githubRepo.description && (
                     <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">
                       {githubRepo.description}
