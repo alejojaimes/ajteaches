@@ -24,9 +24,10 @@ type Props = {
   readers: ReaderListItem[];
   templates: EmailTemplateItem[];
   ownerEmail: string | null;
+  noEmailCount: number;
 };
 
-export function UsersList({ readers, templates, ownerEmail }: Props) {
+export function UsersList({ readers, templates, ownerEmail, noEmailCount }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [composeOpen, setComposeOpen] = useState(false);
@@ -56,16 +57,24 @@ export function UsersList({ readers, templates, ownerEmail }: Props) {
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <label className="text-muted-foreground flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={selectableCount > 0 && selected.size === selectableCount}
-            onChange={toggleAll}
-            disabled={selectableCount === 0}
-            className="accent-primary h-4 w-4"
-          />
-          Select all
-        </label>
+        <div className="flex items-center gap-3">
+          <label className="text-muted-foreground flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={selectableCount > 0 && selected.size === selectableCount}
+              onChange={toggleAll}
+              disabled={selectableCount === 0}
+              className="accent-primary h-4 w-4"
+            />
+            Select all
+          </label>
+          {noEmailCount > 0 && (
+            <span className="text-muted-foreground text-xs">
+              {noEmailCount} user{noEmailCount === 1 ? '' : 's'} without an email can&apos;t be
+              selected
+            </span>
+          )}
+        </div>
         <button
           type="button"
           disabled={selected.size === 0}
@@ -253,7 +262,29 @@ function ComposeEmailDialog({
         className="border-border bg-card mx-4 w-full max-w-lg rounded-2xl border p-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-foreground mb-3 text-base font-semibold">{title}</h3>
+        <h3 className="text-foreground mb-1 text-base font-semibold">{title}</h3>
+        <div className="mb-3 flex flex-wrap items-center gap-1.5">
+          {selectedReaders.slice(0, 6).map((reader) => (
+            <div
+              key={reader.id}
+              className="border-border bg-background flex items-center gap-1.5 rounded-full border py-0.5 pr-2.5 pl-0.5"
+              title={reader.email ?? reader.name}
+            >
+              <Avatar size="sm">
+                {reader.avatar && <AvatarImage src={reader.avatar} alt={reader.name} />}
+                <AvatarFallback className="bg-primary text-[9px] font-bold text-white">
+                  {getInitials(reader.name)}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-foreground max-w-[7rem] truncate text-xs">{reader.name}</span>
+            </div>
+          ))}
+          {selectedReaders.length > 6 && (
+            <span className="text-muted-foreground text-xs">
+              +{selectedReaders.length - 6} more
+            </span>
+          )}
+        </div>
 
         {sent !== null ? (
           <div>
