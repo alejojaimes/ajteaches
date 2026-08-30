@@ -145,7 +145,12 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
         {post.excerpt && <p className="text-muted-foreground mb-8 text-lg">{post.excerpt}</p>}
 
         {githubRepo && post.githubRepoUrl && (
-          <GithubRepoCard url={post.githubRepoUrl} repo={githubRepo} />
+          <GithubRepoCard
+            url={post.githubRepoUrl}
+            repo={githubRepo}
+            badgeLabel={t.githubRepo.badge}
+            ctaLabel={t.githubRepo.cta}
+          />
         )}
 
         {post.postType === 'tutorial' && <AttachmentList attachments={post.attachments} />}
