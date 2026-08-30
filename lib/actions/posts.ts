@@ -10,7 +10,7 @@ import { getFirstContentImage, extractContentImageUrls } from '@/lib/render-post
 import { deletePostMedia, deleteCloudinaryAsset } from '@/lib/cloudinary';
 
 const GITHUB_REPO_URL_RE =
-  /^https?:\/\/github\.com\/([^/\s#?]+)\/([^/\s#?]+?)(?:\.git)?(?:[/#?].*)?$/i;
+  /^https?:\/\/github\.com\/([^/\s#?]+)\/([^/\s#?]+?)(?:\.git)?(\/[^\s#?]*)?(?:[?#].*)?$/i;
 
 export type GithubRepoSnapshot = {
   fullName: string;
@@ -18,6 +18,7 @@ export type GithubRepoSnapshot = {
   language: string | null;
   stars: number;
   ownerAvatar: string | null;
+  license: string | null;
 };
 
 function slugify(text: string): string {
@@ -196,7 +197,8 @@ export async function setGithubRepo(
   const match = GITHUB_REPO_URL_RE.exec(trimmed);
   if (!match)
     throw new Error('Enter a valid GitHub repository URL (https://github.com/owner/repo)');
-  const [, owner, repo] = match;
+  const [, owner, repo, rawPath] = match;
+  const path = rawPath && rawPath !== '/' ? rawPath.replace(/\/+$/, '') : '';
 
   const res = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
     headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'ajteaches-bot/1.0' },
@@ -210,6 +212,7 @@ export async function setGithubRepo(
     language: string | null;
     stargazers_count: number;
     owner: { avatar_url?: string | null } | null;
+    license: { spdx_id?: string | null } | null;
   };
 
   const snapshot: GithubRepoSnapshot = {
@@ -218,12 +221,14 @@ export async function setGithubRepo(
     language: data.language,
     stars: data.stargazers_count,
     ownerAvatar: data.owner?.avatar_url ?? null,
+    license:
+      data.license?.spdx_id && data.license.spdx_id !== 'NOASSERTION' ? data.license.spdx_id : null,
   };
 
   await prisma.post.update({
     where: { id: postId },
     data: {
-      githubRepoUrl: `https://github.com/${owner}/${repo}`,
+      githubRepoUrl: `https://github.com/${owner}/${repo}${path}`,
       githubRepoData: snapshot as unknown as Prisma.InputJsonValue,
     },
   });

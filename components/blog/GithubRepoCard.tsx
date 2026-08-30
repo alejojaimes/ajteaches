@@ -1,4 +1,4 @@
-import { Star, ExternalLink } from 'lucide-react';
+import { Star, ExternalLink, Folder } from 'lucide-react';
 import type { GithubRepoSnapshot } from '@/lib/actions/posts';
 
 type Props = {
@@ -8,7 +8,17 @@ type Props = {
   ctaLabel: string;
 };
 
+/** Folder or file path a `/tree/<branch>/...` or `/blob/<branch>/...` URL points at, if any. */
+export function extractRepoPath(url: string, fullName: string): string | null {
+  const prefix = `https://github.com/${fullName}`;
+  if (!url.startsWith(prefix)) return null;
+  const match = /^\/(?:tree|blob)\/[^/]+\/(.+)$/.exec(url.slice(prefix.length));
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
+}
+
 export function GithubRepoCard({ url, repo, badgeLabel, ctaLabel }: Props) {
+  const path = extractRepoPath(url, repo.fullName);
+
   return (
     <a
       href={url}
@@ -36,16 +46,31 @@ export function GithubRepoCard({ url, repo, badgeLabel, ctaLabel }: Props) {
         )}
         <div className="min-w-0 flex-1">
           <p className="text-foreground truncate text-sm font-semibold">{repo.fullName}</p>
-          {repo.description && (
-            <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">{repo.description}</p>
+          {path && (
+            <p className="text-muted-foreground mt-0.5 flex items-center gap-1 truncate text-xs">
+              <Folder className="h-3 w-3 shrink-0" />
+              {path}
+            </p>
           )}
-          <p className="text-muted-foreground mt-2 flex items-center gap-3 text-xs">
-            {repo.language && <span>{repo.language}</span>}
-            <span className="flex items-center gap-1">
-              <Star className="h-3.5 w-3.5" />
+          {repo.description && (
+            <p className="text-muted-foreground mt-1.5 line-clamp-2 text-sm">{repo.description}</p>
+          )}
+          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+            {repo.language && (
+              <span className="rounded-badge bg-primary-soft text-primary px-2 py-0.5 text-xs font-semibold">
+                {repo.language}
+              </span>
+            )}
+            {repo.license && (
+              <span className="rounded-badge bg-primary-soft text-primary px-2 py-0.5 text-xs font-semibold">
+                {repo.license}
+              </span>
+            )}
+            <span className="rounded-badge bg-primary-soft text-primary flex items-center gap-1 px-2 py-0.5 text-xs font-semibold">
+              <Star className="h-3 w-3" />
               {repo.stars.toLocaleString('en-US')}
             </span>
-          </p>
+          </div>
         </div>
       </div>
 
