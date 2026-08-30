@@ -71,7 +71,12 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
   return (
     <div className="mx-auto max-w-[940px] px-4 py-12 lg:flex lg:items-start lg:gap-10">
       <article className="mx-auto w-full max-w-[700px] lg:mx-0">
-        <TableOfContents headings={headings} title={t.toc.title} variant="mobile" />
+        <TableOfContents
+          headings={headings}
+          title={t.toc.title}
+          openLabel={t.toc.openLabel}
+          variant="mobile"
+        />
         {post.postType === 'tutorial' && post.collection && (
           <div className="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs">
             {post.collection.parent && (

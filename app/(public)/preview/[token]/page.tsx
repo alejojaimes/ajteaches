@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db/client';
 import { renderPostHTML, getFirstContentImage, extractHeadings } from '@/lib/render-post';
+import { getServerDictionary } from '@/lib/i18n/get-locale';
 import { CodeCopyInit } from '@/components/blog/CodeCopyInit';
 import { ImageLightbox } from '@/components/blog/ImageLightbox';
 import { CoverImage } from '@/components/blog/CoverImage';
@@ -9,10 +10,13 @@ import { TableOfContents } from '@/components/blog/TableOfContents';
 export default async function PreviewPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
 
-  const link = await prisma.draftShareLink.findUnique({
-    where: { token },
-    include: { post: { include: { author: true } } },
-  });
+  const [link, t] = await Promise.all([
+    prisma.draftShareLink.findUnique({
+      where: { token },
+      include: { post: { include: { author: true } } },
+    }),
+    getServerDictionary(),
+  ]);
 
   if (!link || link.revoked || link.expiresAt < new Date()) notFound();
 
@@ -27,7 +31,12 @@ export default async function PreviewPage({ params }: { params: Promise<{ token:
   return (
     <div className="mx-auto max-w-[940px] px-4 py-12 lg:flex lg:items-start lg:gap-10">
       <article className="mx-auto w-full max-w-[700px] lg:mx-0">
-        <TableOfContents headings={headings} title="On this page" variant="mobile" />
+        <TableOfContents
+          headings={headings}
+          title={t.toc.title}
+          openLabel={t.toc.openLabel}
+          variant="mobile"
+        />
 
         <div className="mb-4 flex items-center gap-2">
           <span className="rounded-badge bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">
@@ -65,7 +74,7 @@ export default async function PreviewPage({ params }: { params: Promise<{ token:
         <ImageLightbox />
       </article>
       <aside className="hidden w-48 shrink-0 lg:block">
-        <TableOfContents headings={headings} title="On this page" />
+        <TableOfContents headings={headings} title={t.toc.title} />
       </aside>
     </div>
   );
