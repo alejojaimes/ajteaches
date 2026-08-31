@@ -369,6 +369,7 @@ function PredefinedCard({
     extensions: [StarterKit, Link.configure({ openOnClick: false })],
     content: template.bodyHtml || '',
     editorProps: { attributes: { class: editorClass } },
+    shouldRerenderOnTransaction: true,
   });
 
   const handleSave = async () => {
@@ -489,6 +490,7 @@ function CustomCard({
     extensions: [StarterKit, Link.configure({ openOnClick: false })],
     content: template.bodyHtml || '',
     editorProps: { attributes: { class: editorClass } },
+    shouldRerenderOnTransaction: true,
   });
 
   const handleSave = async () => {
@@ -629,6 +631,7 @@ function CreateTemplateCard({
     extensions: [StarterKit, Link.configure({ openOnClick: false })],
     content: '',
     editorProps: { attributes: { class: editorClass } },
+    shouldRerenderOnTransaction: true,
   });
 
   const handleCreate = async () => {
