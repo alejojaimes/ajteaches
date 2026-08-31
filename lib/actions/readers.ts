@@ -9,6 +9,9 @@ import { getResendClient, getFromEmail } from '@/lib/email/client';
 import { renderAdminMessageEmail } from '@/lib/email/templates/admin-message';
 import { renderNewsletterOptInEmail } from '@/lib/email/templates/newsletter-optin';
 import { renderDbTemplate } from '@/lib/email/render-db-template';
+import { findUnresolvedPlaceholders } from '@/lib/email/placeholders';
+
+const SAMPLE_READER_NAME = 'Sample Reader';
 
 export async function updateReaderProfile(payload: {
   name: string;
@@ -61,9 +64,16 @@ export async function setNewsletterOptIn(optIn: boolean): Promise<SetNewsletterO
       const { subject, html } = dbTemplate
         ? renderDbTemplate(dbTemplate.subject, dbTemplate.bodyHtml, { name: reader.name })
         : renderNewsletterOptInEmail({ name: reader.name });
-      resend.emails
-        .send({ from: getFromEmail(), to: reader.email, subject, html })
-        .catch((err: unknown) => console.error('Failed to send newsletter opt-in email', err));
+      const unresolved = findUnresolvedPlaceholders(`${subject} ${html}`);
+      if (unresolved.length > 0) {
+        console.error(
+          `Newsletter opt-in email has unresolved placeholders: ${unresolved.join(', ')}`
+        );
+      } else {
+        resend.emails
+          .send({ from: getFromEmail(), to: reader.email, subject, html })
+          .catch((err: unknown) => console.error('Failed to send newsletter opt-in email', err));
+      }
     }
   }
 
@@ -99,26 +109,32 @@ export async function sendEmailToReaders(
 
   const readers = await prisma.reader.findMany({
     where: { id: { in: readerIds }, email: { not: null } },
-    select: { email: true },
+    select: { email: true, name: true },
   });
   if (readers.length === 0) return { ok: false, error: 'No recipients with an email address' };
 
-  const { html } = renderAdminMessageEmail({
-    subject,
-    messageHtml: message,
-    authorName: author.name,
-  });
   const from = getFromEmail();
 
   for (const batch of chunk(readers, SEND_BATCH_SIZE)) {
-    const { error } = await resend.batch.send(
-      batch.map(({ email }) => ({
-        from,
-        to: email!,
+    const emails = batch.map(({ email, name }) => {
+      const rendered = renderAdminMessageEmail({
         subject,
-        html,
-      }))
-    );
+        messageHtml: message,
+        authorName: author.name,
+        vars: { name },
+      });
+      return { from, to: email!, subject: rendered.subject, html: rendered.html };
+    });
+
+    const unresolved = emails.flatMap((e) => findUnresolvedPlaceholders(`${e.subject} ${e.html}`));
+    if (unresolved.length > 0) {
+      return {
+        ok: false,
+        error: `Unresolved placeholder(s): ${Array.from(new Set(unresolved)).join(', ')}. Only {{name}} is supported.`,
+      };
+    }
+
+    const { error } = await resend.batch.send(emails);
     if (error) return { ok: false, error: error.message };
   }
 
@@ -133,12 +149,21 @@ export async function previewAdminMessage(
   const author = await getCurrentAuthor();
   if (!author || !author.isOwner) throw new Error('Unauthorized');
 
-  const { html } = renderAdminMessageEmail({
+  const rendered = renderAdminMessageEmail({
     subject,
     messageHtml: message,
     authorName: author.name,
+    vars: { name: SAMPLE_READER_NAME },
   });
-  return { html };
+
+  const unresolved = findUnresolvedPlaceholders(`${rendered.subject} ${rendered.html}`);
+  if (unresolved.length > 0) {
+    throw new Error(
+      `Unresolved placeholder(s): ${unresolved.join(', ')}. Only {{name}} is supported.`
+    );
+  }
+
+  return { html: rendered.html };
 }
 
 /** Send an ad-hoc admin message to a single address so the owner can check how it lands. */
@@ -159,17 +184,26 @@ export async function sendTestAdminMessage(
   const resend = getResendClient();
   if (!resend) return { ok: false, error: 'Email is not configured' };
 
-  const { html } = renderAdminMessageEmail({
+  const rendered = renderAdminMessageEmail({
     subject,
     messageHtml: message,
     authorName: author.name,
+    vars: { name: SAMPLE_READER_NAME },
   });
+
+  const unresolved = findUnresolvedPlaceholders(`${rendered.subject} ${rendered.html}`);
+  if (unresolved.length > 0) {
+    return {
+      ok: false,
+      error: `Unresolved placeholder(s): ${unresolved.join(', ')}. Only {{name}} is supported.`,
+    };
+  }
 
   const { error } = await resend.emails.send({
     from: getFromEmail(),
     to: trimmedTo,
-    subject: `[Test] ${subject}`,
-    html,
+    subject: `[Test] ${rendered.subject}`,
+    html: rendered.html,
   });
   if (error) return { ok: false, error: error.message };
 
