@@ -192,6 +192,7 @@ function ComposeEmailDialog({
           'prose prose-sm max-w-none min-h-[140px] px-3 py-2 text-sm text-foreground focus:outline-none',
       },
     },
+    shouldRerenderOnTransaction: true,
   });
 
   const recipientCount = selectedReaders.length;
