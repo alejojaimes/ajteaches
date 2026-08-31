@@ -5,6 +5,7 @@ import { getCurrentAuthor } from '@/lib/auth/get-current-author';
 import { prisma } from '@/lib/db/client';
 import { getResendClient, getFromEmail } from '@/lib/email/client';
 import { renderDbTemplate } from '@/lib/email/render-db-template';
+import { findUnresolvedPlaceholders } from '@/lib/email/placeholders';
 
 const PREDEFINED_KEYS = new Set(['welcome', 'newsletter_optin']);
 const SAMPLE_READER_NAME = 'Sample Reader';
@@ -104,7 +105,16 @@ export async function previewEmailTemplate(
   const author = await getCurrentAuthor();
   if (!author || !author.isOwner) throw new Error('Unauthorized');
 
-  return renderDbTemplate(subject, bodyHtml, { name: SAMPLE_READER_NAME });
+  const rendered = renderDbTemplate(subject, bodyHtml, { name: SAMPLE_READER_NAME });
+
+  const unresolved = findUnresolvedPlaceholders(`${rendered.subject} ${rendered.html}`);
+  if (unresolved.length > 0) {
+    throw new Error(
+      `Unresolved placeholder(s): ${unresolved.join(', ')}. Only {{name}} is supported.`
+    );
+  }
+
+  return rendered;
 }
 
 /** Send this template to a single address so the owner can check how it lands. */
@@ -128,6 +138,14 @@ export async function sendTestEmailTemplate(
   const { subject: resolvedSubject, html } = renderDbTemplate(subject, bodyHtml, {
     name: SAMPLE_READER_NAME,
   });
+
+  const unresolved = findUnresolvedPlaceholders(`${resolvedSubject} ${html}`);
+  if (unresolved.length > 0) {
+    return {
+      ok: false,
+      error: `Unresolved placeholder(s): ${unresolved.join(', ')}. Only {{name}} is supported.`,
+    };
+  }
 
   const { error } = await resend.emails.send({
     from: getFromEmail(),
