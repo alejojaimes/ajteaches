@@ -136,6 +136,21 @@ export function BubbleToolbar({ editor }: Props) {
           >
             🔗
           </button>
+          <div className="bg-border mx-1 h-4 w-px" />
+          <button
+            type="button"
+            title="Inline formula"
+            onClick={() =>
+              editor
+                .chain()
+                .focus()
+                .insertContent({ type: 'mathInline', attrs: { latex: '' } })
+                .run()
+            }
+            className={btn(false)}
+          >
+            ∑
+          </button>
         </>
       )}
     </BubbleMenu>
