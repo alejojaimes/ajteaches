@@ -23,8 +23,10 @@ import type { CollectionListItem } from '@/lib/actions/collections';
 import { compressImageFile } from '@/lib/image-compress';
 import { EmbedNode } from '@/lib/extensions/embed';
 import { UploadPlaceholder } from '@/lib/extensions/upload-placeholder';
+import { MathInline, MathBlock } from '@/lib/extensions/math';
 import { EmbedCardView } from '@/components/editor/EmbedCardView';
 import { CodeBlockView } from '@/components/editor/CodeBlockView';
+import { MathView } from '@/components/editor/MathView';
 import { BubbleToolbar } from '@/components/editor/BubbleToolbar';
 import { TableToolbar } from '@/components/editor/TableToolbar';
 import { ImageToolbar } from '@/components/editor/ImageToolbar';
@@ -367,6 +369,16 @@ export function TiptapEditor({
       Placeholder.configure({ placeholder: 'Tell your story...' }),
       CharacterCount,
       UploadPlaceholder,
+      MathInline.extend({
+        addNodeView() {
+          return ReactNodeViewRenderer(MathView);
+        },
+      }),
+      MathBlock.extend({
+        addNodeView() {
+          return ReactNodeViewRenderer(MathView);
+        },
+      }),
     ],
     content: initialContent ?? '',
     editorProps: {

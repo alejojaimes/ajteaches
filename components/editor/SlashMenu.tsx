@@ -80,6 +80,16 @@ export function SlashMenu({ editor, onImageClick, onEmbedClick }: Props) {
         onEmbedClick();
       },
     },
+    {
+      label: '∑',
+      description: 'Math block',
+      action: () =>
+        editor
+          .chain()
+          .focus()
+          .insertContent({ type: 'mathBlock', attrs: { latex: '' } })
+          .run(),
+    },
   ];
 
   const exec = (item: BlockItem) => {
