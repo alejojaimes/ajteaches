@@ -1,4 +1,5 @@
 import { createLowlight, common } from 'lowlight';
+import { parseVideoUrl } from './video-embed';
 import katex from 'katex';
 
 const lowlight = createLowlight(common);
@@ -265,6 +266,15 @@ function renderNode(node: TiptapNode, ctx: RenderContext): string {
     }
     case 'embedCard':
       return renderEmbedCard(node.attrs ?? {});
+    case 'videoEmbed': {
+      const url = String(node.attrs?.url ?? '');
+      const info = url ? parseVideoUrl(url) : null;
+      if (!info) return '';
+      const media =
+        info.provider === 'file'
+          ? `<video src="${esc(info.embedUrl)}" controls></video>`
+          : `<iframe src="${esc(info.embedUrl)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>`;
+      return `<div class="video-embed"><div class="video-embed-frame">${media}</div></div>`;
     case 'mathInline': {
       const latex = String(node.attrs?.latex ?? '');
       return latex ? `<span class="math-inline">${renderMath(latex, false)}</span>` : '';

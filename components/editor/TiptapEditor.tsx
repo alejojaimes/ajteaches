@@ -23,8 +23,11 @@ import type { CollectionListItem } from '@/lib/actions/collections';
 import { compressImageFile } from '@/lib/image-compress';
 import { EmbedNode } from '@/lib/extensions/embed';
 import { UploadPlaceholder } from '@/lib/extensions/upload-placeholder';
+import { VideoEmbed } from '@/lib/extensions/video-embed';
+import { parseVideoUrl } from '@/lib/video-embed';
 import { MathInline, MathBlock } from '@/lib/extensions/math';
 import { EmbedCardView } from '@/components/editor/EmbedCardView';
+import { VideoEmbedView } from '@/components/editor/VideoEmbedView';
 import { CodeBlockView } from '@/components/editor/CodeBlockView';
 import { MathView } from '@/components/editor/MathView';
 import { BubbleToolbar } from '@/components/editor/BubbleToolbar';
@@ -366,6 +369,11 @@ export function TiptapEditor({
           return ReactNodeViewRenderer(EmbedCardView);
         },
       }),
+      VideoEmbed.extend({
+        addNodeView() {
+          return ReactNodeViewRenderer(VideoEmbedView);
+        },
+      }),
       Placeholder.configure({ placeholder: 'Tell your story...' }),
       CharacterCount,
       UploadPlaceholder,
@@ -386,9 +394,26 @@ export function TiptapEditor({
       handlePaste: (view, event) => {
         const files = Array.from(event.clipboardData?.files ?? []);
         const images = files.filter((file) => file.type.startsWith('image/'));
-        if (images.length === 0) return false;
-        images.forEach((file) => void uploadImageFile(file, view));
-        return true;
+        if (images.length > 0) {
+          images.forEach((file) => void uploadImageFile(file, view));
+          return true;
+        }
+
+        const text = event.clipboardData?.getData('text/plain')?.trim() ?? '';
+        if (text && !/\s/.test(text)) {
+          const { $from } = view.state.selection;
+          const inEmptyParagraph =
+            $from.parent.type.name === 'paragraph' && $from.parent.content.size === 0;
+          const videoInfo = inEmptyParagraph ? parseVideoUrl(text) : null;
+          const videoNodeType = view.state.schema.nodes.videoEmbed;
+          if (videoInfo && videoNodeType) {
+            const node = videoNodeType.create({ url: text });
+            view.dispatch(view.state.tr.replaceSelectionWith(node));
+            return true;
+          }
+        }
+
+        return false;
       },
       handleDrop: (view, event) => {
         const files = Array.from(event.dataTransfer?.files ?? []);
