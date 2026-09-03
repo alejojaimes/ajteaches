@@ -275,6 +275,7 @@ function renderNode(node: TiptapNode, ctx: RenderContext): string {
           ? `<video src="${esc(info.embedUrl)}" controls></video>`
           : `<iframe src="${esc(info.embedUrl)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>`;
       return `<div class="video-embed"><div class="video-embed-frame">${media}</div></div>`;
+    }
     case 'mathInline': {
       const latex = String(node.attrs?.latex ?? '');
       return latex ? `<span class="math-inline">${renderMath(latex, false)}</span>` : '';

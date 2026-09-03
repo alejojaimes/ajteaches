@@ -81,16 +81,23 @@ export function SlashMenu({ editor, onImageClick, onEmbedClick }: Props) {
       },
     },
     {
-      label: '🎬',
-      description: 'Video',
       label: '∑',
       description: 'Math block',
       action: () =>
         editor
           .chain()
           .focus()
-          .insertContent({ type: 'videoEmbed', attrs: { url: '' } })
           .insertContent({ type: 'mathBlock', attrs: { latex: '' } })
+          .run(),
+    },
+    {
+      label: '🎬',
+      description: 'Video',
+      action: () =>
+        editor
+          .chain()
+          .focus()
+          .insertContent({ type: 'videoEmbed', attrs: { url: '' } })
           .run(),
     },
   ];
