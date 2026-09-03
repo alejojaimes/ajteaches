@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
+@import 'katex/dist/katex.min.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -877,4 +878,54 @@
 
 .tiptap-editor .hljs-deletion {
   color: #dc2626;
+}
+
+/* Math formulas (KaTeX) */
+.tiptap-editor .math-inline,
+.tiptap-editor .math-block {
+  cursor: text;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.tiptap-editor .math-inline {
+  display: inline-flex;
+  padding: 0 2px;
+}
+
+.tiptap-editor .math-block {
+  display: block;
+  margin: 1.5rem 0;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+}
+
+.tiptap-editor .math-inline:hover,
+.tiptap-editor .math-block:hover {
+  background: var(--primary-soft);
+}
+
+.tiptap-editor .math-node-selected {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.tiptap-editor .math-source-input {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  color: var(--foreground);
+  background: var(--primary-soft);
+  border: 1px solid var(--primary);
+  border-radius: 6px;
+  padding: 0.25rem 0.5rem;
+  outline: none;
+}
+
+.tiptap-editor .math-inline .math-source-input {
+  min-width: 3ch;
+}
+
+.tiptap-editor .math-block .math-source-input {
+  width: 100%;
+  resize: vertical;
 }

@@ -1,7 +1,16 @@
 import { createLowlight, common } from 'lowlight';
 import { parseVideoUrl } from './video-embed';
+import katex from 'katex';
 
 const lowlight = createLowlight(common);
+
+function renderMath(latex: string, displayMode: boolean): string {
+  try {
+    return katex.renderToString(latex, { throwOnError: false, displayMode });
+  } catch {
+    return esc(latex);
+  }
+}
 
 type TiptapNode = {
   type: string;
@@ -266,6 +275,13 @@ function renderNode(node: TiptapNode, ctx: RenderContext): string {
           ? `<video src="${esc(info.embedUrl)}" controls></video>`
           : `<iframe src="${esc(info.embedUrl)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>`;
       return `<div class="video-embed"><div class="video-embed-frame">${media}</div></div>`;
+    case 'mathInline': {
+      const latex = String(node.attrs?.latex ?? '');
+      return latex ? `<span class="math-inline">${renderMath(latex, false)}</span>` : '';
+    }
+    case 'mathBlock': {
+      const latex = String(node.attrs?.latex ?? '');
+      return latex ? `<div class="math-block">${renderMath(latex, true)}</div>` : '';
     }
     case 'table':
       return `<div class="table-wrapper"><table>${children()}</table></div>`;
