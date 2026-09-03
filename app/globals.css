@@ -526,6 +526,71 @@
   margin: 4px 0 0 0;
 }
 
+/* Video embed (YouTube / Vimeo / direct file) */
+.video-embed {
+  position: relative;
+  margin: 1.5rem 0;
+}
+
+.video-embed-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--muted, #000);
+}
+
+.video-embed-frame iframe,
+.video-embed-frame video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.video-embed-edit-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 6px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.video-embed:hover .video-embed-edit-btn,
+.video-embed:focus-within .video-embed-edit-btn {
+  opacity: 1;
+}
+
+.video-embed-editing {
+  margin: 1.5rem 0;
+}
+
+.video-embed-input {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  color: var(--foreground);
+  background: var(--primary-soft);
+  border: 1px solid var(--primary);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  outline: none;
+}
+
+.video-embed-error {
+  margin: 6px 0 0 0;
+  font-size: 0.8125rem;
+  color: #cc0000;
+}
+
 /* Upload placeholder (inline spinner while pasting/dropping images) */
 .upload-placeholder {
   display: flex;

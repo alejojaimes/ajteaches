@@ -80,6 +80,16 @@ export function SlashMenu({ editor, onImageClick, onEmbedClick }: Props) {
         onEmbedClick();
       },
     },
+    {
+      label: '🎬',
+      description: 'Video',
+      action: () =>
+        editor
+          .chain()
+          .focus()
+          .insertContent({ type: 'videoEmbed', attrs: { url: '' } })
+          .run(),
+    },
   ];
 
   const exec = (item: BlockItem) => {
