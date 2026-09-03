@@ -157,16 +157,41 @@ function DesktopTocRail({
   activeId: string | null;
 }) {
   const activeItemRef = useRef<HTMLAnchorElement | null>(null);
+  const [open, setOpen] = useState(false);
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const scrollPanelToActive = () => {
+  const clearCloseTimeout = () => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+  };
+
+  const openPanel = () => {
+    clearCloseTimeout();
+    setOpen(true);
     activeItemRef.current?.scrollIntoView({ block: 'center' });
   };
 
+  // Grace period before closing: crossing the gap between the dots and the
+  // panel (or briefly leaving while aiming a click at a heading) would
+  // otherwise hide the panel mid-hover, since CSS :hover has no such buffer.
+  const scheduleClose = () => {
+    clearCloseTimeout();
+    closeTimeoutRef.current = setTimeout(() => setOpen(false), 250);
+  };
+
+  useEffect(() => clearCloseTimeout, []);
+
   return (
     <nav
-      className="group fixed top-1/2 right-6 z-[60] hidden -translate-y-1/2 lg:block"
-      onMouseEnter={scrollPanelToActive}
-      onFocus={scrollPanelToActive}
+      className="fixed top-1/2 right-6 z-[60] hidden -translate-y-1/2 lg:block"
+      onMouseEnter={openPanel}
+      onMouseLeave={scheduleClose}
+      onFocus={openPanel}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) scheduleClose();
+      }}
     >
       <ul className="flex flex-col items-end gap-2 py-2">
         {headings.map((heading) => {
@@ -177,7 +202,7 @@ function DesktopTocRail({
                 href={`#${heading.id}`}
                 aria-label={heading.text}
                 className={`block h-1.5 w-1.5 rounded-full transition-colors ${
-                  isActive ? 'bg-primary' : 'bg-border group-hover:bg-muted-foreground/50'
+                  isActive ? 'bg-primary' : open ? 'bg-muted-foreground/50' : 'bg-border'
                 }`}
               />
             </li>
@@ -185,7 +210,11 @@ function DesktopTocRail({
         })}
       </ul>
 
-      <div className="border-border bg-card invisible absolute top-1/2 right-full mr-3 w-56 -translate-y-1/2 rounded-xl border p-4 opacity-0 shadow-lg transition-opacity duration-150 group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
+      <div
+        className={`border-border bg-card absolute top-1/2 right-full mr-3 w-56 -translate-y-1/2 rounded-xl border p-4 shadow-lg transition-opacity duration-150 ${
+          open ? 'visible opacity-100' : 'invisible opacity-0'
+        }`}
+      >
         <p className="text-foreground mb-3 text-sm font-semibold">{title}</p>
         <div className="max-h-[60vh] overflow-y-auto">
           <HeadingList headings={headings} activeId={activeId} activeItemRef={activeItemRef} />
